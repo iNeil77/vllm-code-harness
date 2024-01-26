@@ -52,8 +52,6 @@ def update_args(args):
     args.seed = 0
     args.prompt = None
     args.precision = None
-    args.modeltype = None
-    args.max_memory_per_gpu = None
     return args
 
 

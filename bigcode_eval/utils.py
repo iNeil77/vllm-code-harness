@@ -32,7 +32,6 @@ class TokenizedDataset(IterableDataset):
         n_tasks=None,
         n_copies=1,
         prefix="",
-        has_encoder=False,
         instruction_tokens=None,
     ):
         self.task = task
@@ -44,12 +43,10 @@ class TokenizedDataset(IterableDataset):
         self.n_tasks = n_tasks
         self.n_copies = n_copies
         self.prefix = prefix
-        self.has_encoder = has_encoder
         self.instruction_tokens = instruction_tokens
 
     def __iter__(self):
         prompts = []
-        prompts_encoder = []
         infill = []
         instruction = []
         for sample in range(self.limit_start, self.limit_start + self.n_tasks):
@@ -77,11 +74,6 @@ class TokenizedDataset(IterableDataset):
             else:
                 raise ValueError(f"Unsupported prompt format: {type(prompt_contents)}")
             prompts.append(prompt)
-            if self.has_encoder:
-                prompt_encoder = self.task.get_prompt_encoder(self.dataset[sample])
-                if isinstance(prompt_encoder, str):
-                    prompt_encoder = self.prefix + prompt_encoder
-                prompts_encoder.append(prompt_encoder)
 
         if not len(set(infill)) == 1 or not len(set(instruction)) == 1:
             raise ValueError(
@@ -104,15 +96,6 @@ class TokenizedDataset(IterableDataset):
             max_length=self.max_length,
             return_token_type_ids=return_token_type_ids,
         )
-        if self.has_encoder:
-            outputs_encoder = self.tokenizer(
-                prompts_encoder,
-                padding=True,
-                truncation=True,
-                return_tensors="pt",
-                max_length=self.max_length,
-                return_token_type_ids=return_token_type_ids,
-            )
 
         if self.n_copies == 1 and self.n_tasks % self.num_devices != 0:
             self.n_copies = 2
@@ -122,22 +105,11 @@ class TokenizedDataset(IterableDataset):
 
         for sample in range(self.n_tasks):
             for _ in range(self.n_copies):
-                if self.has_encoder:
-                    yield {
-                        "ids": outputs.input_ids[sample],
-                        "ids_encoder": outputs_encoder.input_ids[sample],
-                        "task_id": sample,
-                        "input_len": outputs.attention_mask[sample].sum(),
-                        "input_len_encoder": outputs_encoder.attention_mask[
-                            sample
-                        ].sum(),
-                    }
-                else:
-                    yield {
-                        "ids": outputs.input_ids[sample],
-                        "task_id": sample,
-                        "input_len": outputs.attention_mask[sample].sum(),
-                    }
+                yield {
+                    "ids": outputs.input_ids[sample],
+                    "task_id": sample,
+                    "input_len": outputs.attention_mask[sample].sum(),
+                }
 
     def _make_infill_prompt(self, prefix, suffix, preprefix=""):
         """Make a prompt for infilling.
@@ -233,7 +205,6 @@ def complete_code(
     prefix="",
     instruction_tokens=None,
     postprocess=True,
-    is_wrapped=False,
     save_every_k_tasks: int = -1,
     intermediate_generations: Optional[List[Optional[List[Optional[str]]]]] = None,
     intermediate_save_generations_path: Optional[str] = None,
@@ -259,8 +230,6 @@ def complete_code(
             if task.stop_words:
                 # Set the start_length after which to check for stopping to be the longest input ignoring padding
                 max_len = batch["input_len"].max().item()
-                if "ids_encoder" in batch:
-                    max_len += 1  # Add 1 for decoder_start_token_id
                 gen_kwargs["stopping_criteria"][0].start_length = max_len
             if hasattr(task, "max_length_multiplier") and task.max_length_multiplier:
                 idx = 1 if task.stop_words else 0
@@ -269,39 +238,12 @@ def complete_code(
                 )
 
             inputs = batch["ids"][:, : batch["input_len"]] if tokenizer.padding_side == "right" else batch["ids"]
-            if "ids_encoder" in batch:
-                if is_wrapped:
-                    generated_tokens = accelerator.unwrap_model(model).generate(
-                        decoder_input_ids=inputs,
-                        input_ids=batch["ids_encoder"][:, : batch["input_len_encoder"]],
-                        num_return_sequences=batch_size,
-                        decoder_start_token_id=tokenizer.pad_token_id,
-                        eos_token_id=tokenizer.eos_token_id,
-                        **gen_kwargs,
-                    )
-                else:
-                    generated_tokens = model.generate(
-                        decoder_input_ids=inputs,
-                        input_ids=batch["ids_encoder"][:, : batch["input_len_encoder"]],
-                        num_return_sequences=batch_size,
-                        decoder_start_token_id=tokenizer.pad_token_id,
-                        eos_token_id=tokenizer.eos_token_id,
-                        **gen_kwargs,
-                    )
-            else:
-                if is_wrapped:
-                    # 8bit and 4bit models are wrapped in accelerator
-                    generated_tokens = accelerator.unwrap_model(model).generate(
-                        input_ids=inputs,
-                        num_return_sequences=batch_size,
-                        **gen_kwargs,
-                    )
-                else:
-                    generated_tokens = model.generate(
-                        input_ids=inputs,
-                        num_return_sequences=batch_size,
-                        **gen_kwargs,
-                    )
+
+            generated_tokens = model.generate(
+                input_ids=inputs,
+                num_return_sequences=batch_size,
+                **gen_kwargs,
+            )
             # each task is generated batch_size times
             generated_tasks = batch["task_id"].repeat(batch_size)
             generated_tokens = accelerator.pad_across_processes(

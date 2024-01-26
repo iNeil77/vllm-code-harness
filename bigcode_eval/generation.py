@@ -118,25 +118,13 @@ def parallel_generations(
         n_tasks=n_tasks,
         n_copies=n_copies,
         prefix=args.prefix,
-        has_encoder=args.modeltype == "seq2seq",
         instruction_tokens=instruction_tokens,
     )
 
     # do not confuse args.batch_size, which is actually the num_return_sequences
     ds_loader = DataLoader(ds_tokenized, batch_size=1)
-
-    is_loaded_in_8bit = getattr(model, "is_loaded_in_8bit", False)
-    is_loaded_in_4bit = getattr(model, "is_loaded_in_4bit", False)
-    if args.max_memory_per_gpu is not None:
-        # The model is already sharded across multiple GPUs
-        ds_loader = accelerator.prepare(ds_loader)
-    elif not is_loaded_in_8bit and not is_loaded_in_4bit:
-        # we only wrap data loader to avoid extra memory occupation
-        model = model.to(accelerator.device)
-        ds_loader = accelerator.prepare(ds_loader)
-    else:
-        # model.to() is not supported for 8bit and 4bit models
-        model, ds_loader = accelerator.prepare(model, ds_loader)
+    model = model.to(accelerator.device)
+    ds_loader = accelerator.prepare(ds_loader)
 
     generations = complete_code(
         task,
@@ -150,7 +138,6 @@ def parallel_generations(
         prefix=args.prefix,
         instruction_tokens=instruction_tokens,
         postprocess=args.postprocess,
-        is_wrapped=is_loaded_in_8bit or is_loaded_in_4bit,
         save_every_k_tasks=save_every_k_tasks,
         intermediate_generations=intermediate_generations,
         intermediate_save_generations_path=intermediate_save_generations_path,

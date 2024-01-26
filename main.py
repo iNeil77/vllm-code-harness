@@ -1,7 +1,6 @@
 import os
 import fnmatch
 import json
-import warnings
 
 import datasets
 import torch
@@ -9,7 +8,6 @@ import transformers
 from accelerate import Accelerator
 from transformers import (
     AutoModelForCausalLM,
-    AutoModelForSeq2SeqLM,
     AutoTokenizer,
     HfArgumentParser,
 )
@@ -43,11 +41,6 @@ def parse_args():
         "--model",
         default="codeparrot/codeparrot-small",
         help="Model to evaluate, provide a repo name in Hugging Face hub or a local path",
-    )
-    parser.add_argument(
-        "--modeltype",
-        default="causal",
-        help="AutoModel to use, it can be causal or seq2seq",
     )
     parser.add_argument(
         "--peft_model",
@@ -98,16 +91,6 @@ def parse_args():
         type=str,
         default="fp32",
         help="Model precision, from: fp32, fp16 or bf16",
-    )
-    parser.add_argument(
-        "--load_in_8bit",
-        action="store_true",
-        help="Load model in 8bit",
-    )
-    parser.add_argument(
-        "--load_in_4bit",
-        action="store_true",
-        help="Load model in 4bit",
     )
     parser.add_argument(
         "--left_padding",
@@ -200,12 +183,6 @@ def parse_args():
         help="Prompt type to use for generation in HumanEvalPack tasks",
     )
     parser.add_argument(
-        "--max_memory_per_gpu",
-        type=str,
-        default=None,
-        help="Max memroy to allocate per gpu, you can also use 'auto'",
-    )
-    parser.add_argument(
         "--check_references",
         action="store_true",
         help="Don't run generation but benchmark groundtruth (useful for debugging)",
@@ -221,12 +198,6 @@ def pattern_match(patterns, source_list):
         for matching in fnmatch.filter(source_list, pattern):
             task_names.add(matching)
     return list(task_names)
-
-
-def get_gpus_max_memory(max_memory, num_gpus):
-    max_memory = {i: max_memory for i in range(num_gpus)}
-    print("Loading model via these GPUs & max memories: ", max_memory)
-    return max_memory
 
 
 def main():
@@ -268,45 +239,11 @@ def main():
             "trust_remote_code": args.trust_remote_code,
             "use_auth_token": args.use_auth_token,
         }
-        if args.load_in_8bit:
-            print("Loading model in 8bit")
-            model_kwargs["load_in_8bit"] = args.load_in_8bit
-            model_kwargs["device_map"] = {"": accelerator.process_index}
-        elif args.load_in_4bit:
-            print("Loading model in 4bit")
-            model_kwargs["load_in_4bit"] = args.load_in_4bit
-            model_kwargs["device_map"] = {"": accelerator.process_index}
-        else:
-            print(f"Loading model in {args.precision}")
-            model_kwargs["torch_dtype"] = dict_precisions[args.precision]
 
-            if args.max_memory_per_gpu:
-                if args.max_memory_per_gpu != "auto":
-                    model_kwargs["max_memory"] = get_gpus_max_memory(
-                        args.max_memory_per_gpu, accelerator.num_processes
-                    )
-                    model_kwargs["offload_folder"] = "offload"
-                else:
-                    model_kwargs["device_map"] = "auto"
-                    print("Loading model in auto mode")
-
-        if args.modeltype == "causal":
-            model = AutoModelForCausalLM.from_pretrained(
-                args.model,
-                **model_kwargs,
-            )
-        elif args.modeltype == "seq2seq":
-            warnings.warn(
-                "Seq2Seq models have only been tested for HumanEvalPack & CodeT5+ models."
-            )
-            model = AutoModelForSeq2SeqLM.from_pretrained(
-                args.model,
-                **model_kwargs,
-            )
-        else:
-            raise ValueError(
-                f"Non valid modeltype {args.modeltype}, choose from: causal, seq2seq"
-            )
+        model = AutoModelForCausalLM.from_pretrained(
+            args.model,
+            **model_kwargs,
+        )
 
         if args.peft_model:
             from peft import PeftModel  # dynamic import to avoid dependency on peft

@@ -551,14 +551,6 @@ class HumanEvalFixBase(HumanEvalPackGenerative):
 
 
 class HumanEvalExplainDescribeBase(HumanEvalPack):
-    def get_prompt_encoder(self, doc):
-        """Encoder input for models with Enc-Dec architecture like CodeT5"""
-        assert self.prompt == "instructcodet5p", "Enc-Dec is only tested for InstructCodeT5+"
-        prompt_base = self.get_prompt_base(doc)
-        instruction = f"Provide a concise natural language description of the code using at most {len(doc['docstring'])} characters."
-        context = prompt_base + doc["canonical_solution"]
-
-        return super().get_prompt("", instruction, context) # No prompt base as not generating
     
     def get_prompt(self, doc):
         """Builds the prompt for the LM to generate from."""
@@ -621,15 +613,6 @@ class HumanEvalExplainSynthesizeBase(HumanEvalPackGenerative):
             for description_candidate in description:
                 dataset.append({"description": description_candidate} | sample)
         return dataset
-
-    def get_prompt_encoder(self, doc):
-        """Encoder input for models with Enc-Dec architecture like CodeT5"""
-        assert self.prompt == "instructcodet5p", "Enc-Dec is only tested for InstructCodeT5+"
-        prompt_base = "" # No prompt base as not generating
-        instruction = f"Write functional code in {LANGUAGE_TO_NAME[self.DATASET_NAME]} according to the description."
-        context = doc["description"]
-
-        return super().get_prompt(prompt_base, instruction, context)
     
     def get_prompt(self, doc):
         """Builds the prompt for the LM to generate from."""
@@ -641,14 +624,6 @@ class HumanEvalExplainSynthesizeBase(HumanEvalPackGenerative):
 
 
 class HumanEvalSynthesizeBase(HumanEvalPackGenerative):
-    def get_prompt_encoder(self, doc):
-        """Encoder input for models with Enc-Dec architecture like CodeT5"""
-        assert self.prompt == "instructcodet5p", "Enc-Dec is only tested for InstructCodeT5+"
-        prompt_base = "" # No prompt base as not generating
-        instruction = doc["instruction"].strip()
-
-        return super().get_prompt(prompt_base, instruction)
-        
     def get_prompt(self, doc):
         """Builds the prompt for the LM to generate from."""
         prompt_base = self.get_prompt_base(doc)
