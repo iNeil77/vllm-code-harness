@@ -205,8 +205,6 @@ def complete_code(
     prefix="",
     instruction_tokens=None,
     postprocess=True,
-    save_every_k_tasks: int = -1,
-    intermediate_generations: Optional[List[Optional[List[Optional[str]]]]] = None,
     intermediate_save_generations_path: Optional[str] = None,
     **gen_kwargs,
 ):
@@ -218,7 +216,7 @@ def complete_code(
     # keep track of the list of generated codes
     # where len(code_gens) = n_tasks and len(code_gens[0]) = number of generated code samples
     code_gens: List[List[Optional[str]]] = [[] for _ in range(n_tasks)]
-    generations = [] if not intermediate_generations else intermediate_generations
+    generations = []
     gen_token_dict = defaultdict(list)  # dict of list of generated tokens
     for step, batch in tqdm(
         enumerate(dataloader),
@@ -258,30 +256,6 @@ def complete_code(
 
             for sample, generated_tokens in zip(generated_tasks, generated_tokens):
                 gen_token_dict[sample].append(generated_tokens)
-
-            if save_every_k_tasks >= 1 and (step + 1) % save_every_k_tasks == 0:
-                if not intermediate_save_generations_path:
-                    raise ValueError(
-                        "intermediate_save_generations_path cannot be empty!"
-                    )
-
-                code_gens = update_code_gens(
-                    task,
-                    tokenizer,
-                    limit_start,
-                    prefix,
-                    instruction_tokens,
-                    postprocess,
-                    code_gens,
-                    gen_token_dict,
-                )
-                with open(intermediate_save_generations_path, "w") as fp:
-                    json.dump(generations + code_gens, fp)
-                    print(
-                        f"intermediate generations were saved at {intermediate_save_generations_path}"
-                    )
-                # reset gen_token_dict - prevent redundant decoding
-                gen_token_dict = defaultdict(list)
 
     code_gens = update_code_gens(
         task,

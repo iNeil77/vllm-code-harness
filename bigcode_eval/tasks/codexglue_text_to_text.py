@@ -6,9 +6,6 @@ Text to text task from CodeXGlue (documentation translation)
 """
 
 import json
-import os
-import re
-
 from evaluate import load
 
 from bigcode_eval.base import Task

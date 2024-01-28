@@ -7,9 +7,6 @@ It is uploaded here: https://huggingface.co/datasets/Muennighoff/python-bugs
 Make sure to run with sufficient context length (512 is not enough for e.g. CodeGen).
 """
 
-import re
-
-from evaluate import load
 from bigcode_eval.base import Task
 import tqdm
 
@@ -107,6 +104,9 @@ class PythonBugs(Task):
         prompt = self.get_prompt(doc)
         correct_code = self.get_reference(doc)
         output = generation[len(prompt):]
+        tot_len = len(generation)
+        if tot_len>(len(prompt)*self.max_length_multiplier):
+            generation = generation[:(len(prompt)*self.max_length_multiplier)]
         if self.prompt.startswith("prompt"):
             output = "def" + output # Add def which is in the prompt back to the output
         return output[:len(correct_code)]

@@ -110,12 +110,6 @@ def parse_args():
         help="Optional offset to start from when limiting the number of samples",
     )
     parser.add_argument(
-        "--save_every_k_tasks",
-        type=int,
-        default=-1,
-        help="Optional saving after every k tasks",
-    )
-    parser.add_argument(
         "--postprocess",
         action="store_false",
         help="Postprocess model outputs before execution, always on except during generation tests",
@@ -154,12 +148,6 @@ def parse_args():
         help="Whether to save code generations",
     )
     parser.add_argument(
-        "--load_generations_intermediate_paths",
-        type=str,
-        nargs="*",
-        help="List of paths for saving the intermediate code generations",
-    )
-    parser.add_argument(
         "--save_generations_path",
         type=str,
         default="generations.json",
@@ -182,11 +170,6 @@ def parse_args():
         default="prompt",
         help="Prompt type to use for generation in HumanEvalPack tasks",
     )
-    parser.add_argument(
-        "--check_references",
-        action="store_true",
-        help="Don't run generation but benchmark groundtruth (useful for debugging)",
-    )
     return parser.parse_args()
 
 
@@ -197,22 +180,17 @@ def pattern_match(patterns, source_list):
     for pattern in patterns:
         for matching in fnmatch.filter(source_list, pattern):
             task_names.add(matching)
-    return list(task_names)
+    if len(task_names) > 1:
+        raise ValueError(f"This repo only supports one task at a time but received {len(task_names)} tasks")
+    return list(task_names)[0]
 
 
 def main():
     args = parse_args()
     transformers.logging.set_verbosity_error()
     datasets.logging.set_verbosity_error()
-
-    if args.tasks is None:
-        task_names = ALL_TASKS
-    else:
-        task_names = pattern_match(args.tasks.split(","), ALL_TASKS)
-
+    task = pattern_match(args.tasks.split(","), ALL_TASKS)
     accelerator = Accelerator()
-    if accelerator.is_main_process:
-        print(f"Selected Tasks: {task_names}")
 
     results = {}
     if args.load_generations_path:
@@ -220,8 +198,7 @@ def main():
         if accelerator.is_main_process:
             print("evaluation only mode")
         evaluator = Evaluator(accelerator, None, None, args)
-        for task in task_names:
-            results[task] = evaluator.evaluate(task)
+        results[task] = evaluator.evaluate(task)
     else:
         # here we generate code and save it (evaluation is optional but True by default)
         dict_precisions = {
@@ -296,43 +273,21 @@ def main():
             print("Changing bos_token to <s>")
 
         evaluator = Evaluator(accelerator, model, tokenizer, args)
-
-        if (
-            args.load_generations_intermediate_paths
-            and len(args.load_generations_intermediate_paths) != len(task_names)
-        ):
-            raise ValueError(
-                "If passing --load_generations_intermediate_paths, \
-                must pass equal number of files as number of tasks"
-            )
-
-        for idx, task in enumerate(task_names):
-            intermediate_generations = None
-            if args.load_generations_intermediate_paths:
-                with open(args.load_generations_intermediate_paths[idx], "r") as f_in:
-                    # intermediate_generations: list[list[str | None]] of len n_tasks
-                    # where list[i] = generated codes or empty
-                    intermediate_generations = json.load(f_in)
-
-            if args.generation_only:
-                if accelerator.is_main_process:
-                    print("generation mode only")
-                generations, references = evaluator.generate_text(
-                    task, intermediate_generations=intermediate_generations
+        if args.generation_only:
+            if accelerator.is_main_process:
+                print("generation mode only")
+            generations, references = evaluator.generate_text(task)
+            if accelerator.is_main_process:
+                save_generations_path = f"{os.path.splitext(args.save_generations_path)[0]}_{task}.json"
+                save_references_path = f"references_{task}.json"
+                evaluator.save_json_files(
+                    generations,
+                    references,
+                    save_generations_path,
+                    save_references_path,
                 )
-                if accelerator.is_main_process:
-                    save_generations_path = f"{os.path.splitext(args.save_generations_path)[0]}_{task}.json"
-                    save_references_path = f"references_{task}.json"
-                    evaluator.save_json_files(
-                        generations,
-                        references,
-                        save_generations_path,
-                        save_references_path,
-                    )
-            else:
-                results[task] = evaluator.evaluate(
-                    task, intermediate_generations=intermediate_generations
-                )
+        else:
+            results[task] = evaluator.evaluate(task)
 
     # Save all args to config
     results["config"] = vars(args)

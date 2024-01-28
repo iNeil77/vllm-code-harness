@@ -11,12 +11,8 @@ This task implements PAL methodology to evaluate GSM-8k and GSM-Hard benchmarks.
 """
 
 import json
-import os
-import re
 from enum import Enum
 from typing import Union
-
-from evaluate import load
 
 from bigcode_eval.base import Task
 from bigcode_eval.tasks.custom_metrics.pal_metric.pal_code_exec import compute

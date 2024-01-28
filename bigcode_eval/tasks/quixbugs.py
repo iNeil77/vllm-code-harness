@@ -104,6 +104,9 @@ class QuixBugs(Task):
         doc = self.get_dataset()[idx]
         prompt = self.get_prompt(doc)
         generation = generation[len(prompt):]
+        tot_len = len(generation)
+        if tot_len>(len(prompt)*self.max_length_multiplier):
+            generation = generation[:(len(prompt)*self.max_length_multiplier)]
         if self.prompt == "prompt":
             generation = "def" + generation # Add def which is in the prompt back to the output        
         return self.remove_last_block(generation, self.stop_words)
