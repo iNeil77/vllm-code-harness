@@ -251,26 +251,6 @@ class HumanEvalPack(Task):
 
 class HumanEvalPackGenerative(HumanEvalPack):
     """Parent class for all HumanEvalPack tasks except describing code"""
-    def check_fn(self, code):
-        """
-        Checks whether the generated code is finished.
-        Problem: Models rarely split their code into multiple functions, but this stops the model after the 1st function.
-        Inspiration: https://github.com/THUDM/CodeGeeX/blob/23ee51505a2bcd34d59d2e271b22e5bd91475462/codegeex/benchmark/utils.py#L115
-        """
-        if any([w in code for w in self.stop_words]): return True
-
-        # The heuristics below do not hold for diff generation
-        if (self.prompt.startswith("diff")): return False
-
-        if self.DATASET_NAME == "python":
-            for line in code.split("\n"):
-                if len(line.strip()) > 0 and line[0] != ' ' and line[0] != '\t':
-                    return True
-        else:
-            open_brackets = 2 if self.DATASET_NAME == "java" else 1
-            if code.count("{") + open_brackets == code.count("}"):
-                return True
-        return False 
 
     def remove_last_block(self, code):
         """
@@ -320,9 +300,27 @@ class HumanEvalPackGenerative(HumanEvalPack):
         """
         doc = self.get_dataset()[idx]
         prompt = self.get_prompt(doc)
-        gen = self.remove_last_block(generation[len(prompt):].rstrip())
-        # Strip to maintain same behavior as with get_prompt
-        return doc["prompt"].rstrip() + gen
+        generation = generation[len(prompt):]
+        generation = self._stop_at_stop_token(generation, self.stop_words)
+        if not self.prompt.startswith("diff"):
+            if self.DATASET_NAME == "python":
+                new_generation = []
+                for line in generation.split("\n"):
+                    new_generation.append(line)
+                    if len(line.strip()) > 0 and line[0] != ' ' and line[0] != '\t':
+                        break
+                generation = "\n".join(new_generation)
+            else:
+                open_brackets = 2 if self.DATASET_NAME == "java" else 1
+                pos_close = [i.start() for i in re.finditer(generation, "}")]
+                for pos in pos_close:
+                    new_generation = generation[:min(len(generation), pos+1)]
+                    if new_generation.count("{") + open_brackets ==  new_generation.count("}"):
+                        generation = new_generation
+                        break
+
+        gen = self.remove_last_block(generation.rstrip())
+        return prompt + generation
         
     def process_results(self, generations, references):
         """Takes the list of LM generations and evaluates them against ground truth references.

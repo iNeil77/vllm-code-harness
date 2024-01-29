@@ -23,7 +23,6 @@ Below are the features and tasks of this framework:
 
 - Features:
     - Any autoregressive model available on [Hugging Face hub](https://huggingface.co/) can be used, but we recommend using code generation models trained specifically on Code such as [SantaCoder](https://huggingface.co/bigcode/santacoder), [InCoder](https://huggingface.co/facebook/incoder-6B) and [CodeGen](https://huggingface.co/Salesforce/codegen-16B-mono).
-    - We provide Multi-GPU text generation with `accelerate` and Dockerfiles for evaluating on Docker containers for security and reproducibility.
 
 - Tasks:
     - 6 code generation **Python** tasks (with unit tests): [HumanEval](https://huggingface.co/datasets/openai_humaneval), [HumanEval+](https://huggingface.co/datasets/evalplus/humanevalplus), [InstructHumanEval](https://huggingface.co/datasets/codeparrot/instructhumaneval), [APPS](https://huggingface.co/datasets/codeparrot/apps), [MBPP](https://huggingface.co/datasets/mbpp) and [DS-1000](https://github.com/HKUNLP/DS-1000/) for both completion (left-to-right) and insertion (FIM) mode.
@@ -57,8 +56,6 @@ pip install -e ".[ds1000]" # installs all additional dependencies except PyTorch
 # torch==1.12.1 required. Download version with relevant GPU support etc., e.g.,
 pip install torch==1.12.1+cu116 --extra-index-url https://download.pytorch.org/whl/cu116
 
-# to suppress any tensorflow optimization warnings, 
-# precede call to "accelerate launch" with "TF_CPP_MIN_LOG_LEVEL=3"
 
 # on some systems, tensorflow will attempt to allocate all GPU memory
 # to its process at import which will raise a CUDA out-of-memory error
@@ -69,13 +66,8 @@ Also make sure you have `git-lfs` installed and are logged in the Hub
 huggingface-cli login
 ````
 
-We use [`accelerate`](https://huggingface.co/docs/accelerate/index) to generate code/text in parallel when multiple GPUs are present (multi-GPU mode). You can configure it using:
 
-```bash
-accelerate config
-```
-
-This evaluation harness can also be used in an evaluation only mode, you can use a Multi-CPU setting. For large models, we recommend specifying the precision of the model using the `--precision` flag instead of accelerate config to have only one copy of the model in memory. 
+This evaluation harness can also be used in an evaluation only mode, you can use a Multi-CPU setting. For large models, we recommend specifying the precision of the model using the `--precision` flag. 
 
 The evaluation part (solutions execution) for [MultiPL-E](https://github.com/nuprl/MultiPL-E) requires extra dependencies for some programming languages, we provide a Dockerfile with all dependencies, see section [Docker](#docker-containers) for more details.
 
@@ -88,7 +80,7 @@ For more details on how to evaluate on the tasks, please refer to the documentat
 Below is an example to generate and evaluate on a task.
 
 ```bash
-accelerate launch  main.py \
+python main.py \
   --model <MODEL_NAME> \
   --tasks <TASK_NAME> \
   --limit <NUMBER_PROBLEMS> \
@@ -96,7 +88,6 @@ accelerate launch  main.py \
   --temperature <TEMPERATURE> \
   --do_sample True \
   --n_samples 100 \
-  --batch_size 10 \
   --precision <PRECISION> \
   --allow_code_execution \
   --save_generations
@@ -108,7 +99,7 @@ accelerate launch  main.py \
 * `max_length_generation` is the maximum token length of generation including the input token length. The default is 512, but for some tasks like GSM8K and GSM-Hard, the complete prompt with 8 shot examples (as used in [PAL](https://github.com/reasoning-machines/pal)) take up `~1500` tokens, hence the value should be greater than that and the recommended value of `max_length_generation` is `2048` for these tasks.
 
 Some tasks don't require code execution such as
-`codexglue_code_to_text-<LANGUAGE>`/`codexglue_code_to_text-python-left`/`conala`/`concode` that use BLEU evaluation. In addition, we generate one candidate solution for each problem in these tasks, so use `n_samples=1` and `batch_size=1`. (Note that `batch_size` should always be equal or less than `n_samples`).
+`codexglue_code_to_text-<LANGUAGE>`/`codexglue_code_to_text-python-left`/`conala`/`concode` that use BLEU evaluation. In addition, we generate one candidate solution for each problem in these tasks, so use `n_samples=1`.
 * For APPS tasks, you can use `n_samples=1` for strict and average accuracies (from the original APPS paper) and `n_samples>1` for pass@k.
 
 ### Generation only
@@ -119,12 +110,12 @@ This can be useful if you don't want to execute code in the machine you're using
 
 ### Evaluation only
 
-If you already have the generations in a json file from this evaluation harness and want to evaluate them, specify the path of the generations via the `load_generations_path` argument. You may need to reconfigure `accelerate` to use multiple CPUs.
+If you already have the generations in a json file from this evaluation harness and want to evaluate them, specify the path of the generations via the `load_generations_path` argument.
 
 Below is an example, be mind of specifying arguments proper to the task you are evaluating on, and note that `model` value here only serves for documenting the experiment. Also add `--n_samples` to specify the number of samples to evaluate per problem (usually the same value used in generation).
 
 ```bash
-accelerate launch  main.py   --tasks mbpp  --allow_code_execution  --load_generations_path generations.json  --model incoder-temperature-08
+python main.py   --tasks mbpp  --allow_code_execution  --load_generations_path generations.json  --model incoder-temperature-08
 ```
 
 ## Docker containers
@@ -161,14 +152,13 @@ This creates an image called `evaluation-harness-multiple`.
 ### Evaluating inside a container
 Suppose you generated text with the `bigcode/santacoder` model and saved it in `generations_py.json` with:
 ```bash
-accelerate launch  main.py \
+python  main.py \
     --model bigcode/santacoder  \
     --tasks multiple-py  \
     --max_length_generation 650 \
     --temperature 0.8   \
     --do_sample True  \
     --n_samples 200  \
-    --batch_size 200  \
     --trust_remote_code \
     --generation_only \
     --save_generations \
@@ -191,9 +181,6 @@ To implement a new task in this evaluation harness, see the guide in [`docs/guid
 
 ## Documentation
 We provide documentation for the existing benchmarks and how to run the evaluation in [`docs/README.md`](https://github.com/bigcode-project/bigcode-evaluation-harness/blob/main/docs/README.md).
-
-## Remarks
-* Currenltly, we use data parallel evaluation across multiple GPUs using `accelerate`, this assumes that you can fit the model in one GPU. 
 
 ## Acknowledgements
 We thank EleutherAI for their work on the [lm-evaluation harness](https://github.com/EleutherAI/lm-evaluation-harness) from which this repository is inspired.

@@ -2,8 +2,6 @@ import json
 import os
 import tempfile
 
-from accelerate import Accelerator
-from accelerate.utils import write_basic_config
 from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 
 from bigcode_eval.arguments import EvalArguments
@@ -42,10 +40,8 @@ def update_args(args):
 
     args.limit = 2
     args.limit_start = 0
-    args.batch_size = 1
     args.max_length_generation = 300
     args.left_padding = False
-    args.do_sample = False
     args.top_p = 0
     args.n_samples = 1
     args.seed = 0
@@ -58,10 +54,7 @@ def setup():
     model = AutoModelForCausalLM.from_pretrained(TEST_MODEL)
     tokenizer = AutoTokenizer.from_pretrained(TEST_MODEL)
     tokenizer.pad_token = tokenizer.eos_token
-    configPath = os.path.join(TMPDIR, "default_config.yml")
-    write_basic_config(save_location=configPath)
-    accelerator = Accelerator()
-    return model, tokenizer, accelerator
+    return model, tokenizer
 
 
 def load_generation_examples(task):
@@ -75,12 +68,12 @@ def load_generation_examples(task):
 
 args = update_args(EvalArguments())
 set_seed(args.seed)
-model, tokenizer, accelerator = setup()
+model, tokenizer = setup()
 
 
 def test_generation():
     args.generation_only = True
-    evaluator = Evaluator(accelerator, model, tokenizer, args)
+    evaluator = Evaluator(model, tokenizer, args)
     for task in GEN_TASKS:
         print(f"testing task {task}")
         generations, references = evaluator.generate_text(task)
@@ -97,7 +90,7 @@ def test_evaluation():
         print(f"testing task {task}")
         # path to generation examples to evaluate
         args.load_generations_path = f"tests/data/{task}_eval_gens.json"
-        evaluator = Evaluator(accelerator, None, None, args)
+        evaluator = Evaluator(None, None, args)
         results = evaluator.evaluate(task)
         assert results == REF_EVAL_SCORES[task]
     print("passed eval")

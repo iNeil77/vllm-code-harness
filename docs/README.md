@@ -19,7 +19,6 @@ In this evaluation harness, we include tasks with unit tests, but also some task
 
 Before diving into the tasks, here are some instructions that stand for all the benchmarks:
   * Adapt `max_length_generation` based on your model's context size and task, by default it is 512. This value is enough for tasks like HumanEval and MBPP but some tasks such as APPS require a larger value because the prompts are long, you can use the full model's context size.
-  * Adapt the  `batch_size` based on your device memory and `n_samples`, by default it is 1. It should be smaller than `n_samples`, but for multiple generations per problem, the larger the batch size the better, since it makes the generation faster.
   * `allow_code_execution` allows the execution of the model-generated (untrusted) code on your machine, please read carefully the displayed warning before calling it (it is off by default). 
   * You can adapt the text generation parameter by changing `do_sample`, `top_p` and `temperature` parameters. 
   * Some models, such as [InCoder](https://huggingface.co/facebook/incoder-6B), might require adding a prefix before the prompt to give a hint about the language. To add the prefix for InCoder to indicate Python language for example, set `prefix` argument to `"<| file ext=.py |>\n"`.
@@ -37,13 +36,12 @@ We follow Chen et al. approach for pass@k estimation, where $n=200 > k$ solution
 
 Below are the commands to run the evaluation with these settings:
 ```python
-accelerate launch  main.py \
+python main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks humaneval \
   --temperature 0.2 \
   --n_samples 200 \
-  --batch_size 10 \
   --allow_code_execution
 ```
 
@@ -55,13 +53,12 @@ If you want to evaluate only on the first $n$ samples instead of all the test da
 The generation and evaluation follows the same approach as [HumanEval](#humaneval). One only needs to change the task name to `humanevalplus` to run the evaluation on HumanEval+, such as:
 
 ```python
-accelerate launch  main.py \
+python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks humanevalplus \
   --temperature 0.2 \
   --n_samples 200 \
-  --batch_size 10 \
   --allow_code_execution
 ```
 
@@ -76,30 +73,28 @@ accelerate launch  main.py \
 The three scenarios are listed below. The selectable languages are: `python`, `js`, `java`, `go`, `cpp` & `rust`.
 - HumanEvalFix: In this task models are provided with a solution with a subtle bug and several unit tests. The task is to fix the function. There is a variant of this task where the function docstring instead of the unit tests are provided, which can be selected via `humanevalfixdocs`.
 ```
-accelerate launch main.py \
+python main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --prompt <PROMPT> \
   --tasks humanevalfixtests-python \
   --temperature 0.2 \
   --n_samples 20 \
-  --batch_size 10 \
   --allow_code_execution
 ```
 - HumanEvalExplain: In this task models need to explain a HumanEval solution (without docstring) and subsequently regenerate the solution given only the model's own explanation. Thus, it requires two runs. The first one generates the descriptions, the second loads the descriptions, generates the solution & is scored.
 ```
-accelerate launch main.py \
+python main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --prompt <PROMPT> \
   --tasks humanevalexplaindescribe-python \
   --temperature 0.2 \
   --n_samples 20 \
-  --batch_size 10 \
   --allow_code_execution \
   --generation_only
 
-accelerate launch main.py \
+python main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --prompt <PROMPT> \
@@ -107,20 +102,18 @@ accelerate launch main.py \
   --tasks humanevalexplainsynthesize-python \
   --temperature 0.2 \
   --n_samples 1 \
-  --batch_size 1 \
   --allow_code_execution
 ```
 - HumanEvalSynthesize: This is like HumanEval but with human translations for JavaScript, Java, Go, C++ and Rust. It is based on [HumanEval-X](https://arxiv.org/abs/2303.17568), however, with additional fixes and improvements documented [here](https://github.com/bigcode-project/octopack/tree/main/evaluation/create/humaneval-x#modifications-muennighoff).
 
 ```
-accelerate launch main.py \
+python main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --prompt <PROMPT> \
   --tasks humanevalsynthesize-python \
   --temperature 0.2 \
   --n_samples 20 \
-  --batch_size 10 \
   --allow_code_execution \
   --save_generations
 ```
@@ -155,27 +148,25 @@ Here are the commands to run the evaluation in each setting:
 
 for code completion
 ```python
-accelerate launch  main.py \
+python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks instruct-humaneval \
   --instruction_tokens <user_token>,<end_token>,<assistant_token>\
   --temperature 0.2 \
   --n_samples 200 \
-  --batch_size 10 \
   --allow_code_execution
 ```
 
 for docstring to code
 ```python
-accelerate launch  main.py \
+python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks instruct-humaneval-nocontext \
   --instruction_tokens <user_token>,<end_token>,<assistant_token>\
   --temperature 0.2 \
   --n_samples 200 \
-  --batch_size 10 \
   --allow_code_execution
 ```
 The main change is the use of the `instruction_tokens` argument which represents the 3 tokens we mentionned above separated from each other by a comma `,`.
@@ -194,13 +185,12 @@ designed to be solvable by entry-level programmers. Each problem consists of a t
 
 Below are the commands to run the evaluation with these settings:
 ```python
-accelerate launch  main.py \
+python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks mbpp \
   --temperature 0.1 \
   --n_samples 15 \
-  --batch_size 10 \
   --allow_code_execution
 ```
 
@@ -218,9 +208,8 @@ Below is the command to run evaluation on the full benchmark in insertion mode w
 
 ```bash
 export TF_FORCE_GPU_ALLOW_GROWTH=true
-TF_CPP_MIN_LOG_LEVEL=3 accelerate launch main.py \
+TF_CPP_MIN_LOG_LEVEL=3 python main.py \
   --model <MODEL_NAME> \
-  --batch_size <BATCH_SIZE> \
   --tasks ds1000-all-insertion \
   --n_samples 40 \
   --max_length_generation 1024 \
@@ -240,14 +229,13 @@ This creates an image called `evaluation-harness-multiple`.
 
 Suppose you generated text with the `bigcode/santacoder` model and saved it in `generations_py.json` with:
 ```bash
-accelerate launch  main.py \
+python  main.py \
     --model bigcode/santacoder  \
     --tasks multiple-py  \
     --max_length_generation 650 \
     --temperature 0.8   \
     --do_sample True  \
     --n_samples 200  \
-    --batch_size 200  \
     --trust_remote_code \
     --generation_only \
     --save_generations \
@@ -322,13 +310,12 @@ Below are the commands to run the evaluation with these settings for introductor
 ```python
 # to compute average/strict accuracies: use n_samples 1 
 # to compute pass@k: use n_samples != 1 (200)
-accelerate launch  main.py \
+python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks apps-introductory \
   --n_samples 1 \
   --temperature 0.1 \
-  --batch_size 1 \
   --allow_code_execution
 ```
 We expect a model [finetuned](https://github.com/bigcode-project/bigcode-evaluation-harness/tree/main/finetuning/APPS) on the train split of APPS.
@@ -341,11 +328,10 @@ For now, we support the perturbed version of the HumanEval benchmark.
 The task is specified with `--tasks perturbed-humaneval-{category}-num_seeds_{num_seeds}` where `category` can be one of `format`, `func_name`, `natgen`, `nlaugmenter`, and the number of seeds per perturbation is from `1` to `10`. The author's recommendation is to run with 5 seeds, with greedy generation.
 
 ```python
-accelerate launch  main.py \
+python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation 1024 \
   --tasks <TASK> \
-  --batch_size 1 \
   --do_sample False \
   --n_samples 1 \
   --allow_code_execution
@@ -363,13 +349,12 @@ For these tasks, we do single generations and compare the generated code against
 We only do single generation `n_samples=1`, and use the same generation settings as before.
 Below are the commands to run the evaluation:
 ```python
-accelerate launch  main.py \
+python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks <TASK> \
   --n_samples 1 \
-  --temperature 0.1 \
-  --batch_size 1 
+  --temperature 0.1
 ```
 If you ever get index out-of-range errors try using a number of problems `limit` that is proportional to the number of devices you are using.
 
@@ -386,13 +371,12 @@ So depending on the FIM tokens used to train the model, you will need to select 
 We only do single generation `n_samples=1`, and use the same generation settings as before.
 Below are the commands to run the evaluation:
 ```python
-accelerate launch  main.py \
+python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks <TASK> \
   --n_samples 1 \
-  --temperature 0.2 \
-  --batch_size 1 
+  --temperature 0.2
 ```
 If you ever get index out-of-range errors try using a number of problems `limit` that is proportional to the number of devices you are using.
 
@@ -410,12 +394,11 @@ For this task, we advise using greedy generation. For evaluation, we compute the
 
 Below are the commands to run the evaluation:
 ```python
-accelerate launch  main.py \
+python main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks codexglue_code_to_text-python-left \
-  --n_samples 1 \
-  --batch_size 1 \
+  --n_samples 1
 ```
 ## Downstream classification tasks
 
@@ -451,12 +434,11 @@ Commands to run the evaluation:
 **Greedy Decoding**
 
 ```python
-accelerate launch  main.py \
+python main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks pal-gsm8k-greedy \
   --n_samples 1 \
-  --batch_size 1 \
   --do_sample False \
   --allow_code_execution
 ```
@@ -464,12 +446,11 @@ accelerate launch  main.py \
 **Majority Voting**
 
 ```python
-accelerate launch  main.py \
+python main.py \
   --model <MODEL_NAME> \
   --max_length_generation <MAX_LENGTH> \
   --tasks pal-gsmhard-majority_voting \
   --n_samples 40 \
-  --batch_size 1 \
   --temperature 0.7 \
   --top_p 0.95 \
   --allow_code_execution

@@ -31,7 +31,7 @@ To run the evaluation, we first generate the code solutions for the target tasks
 ### 2- Generation
 Below are the instruction for generating the code solutions sequentially or in parallel with slurm. You might need to reduce the batch size for some models or change the precision based on your device.
 ```bash
-# after activating env and setting up accelerate...
+# after activating env...
 langs=(py js java cpp swift php d jl lua r rkt rs)
 
 model=YOUR_MODEL
@@ -47,11 +47,10 @@ for lang in "${langs[@]}"; do
 
     echo "Running task $task"
     generations_path=generations_$model/generations_$task\_$model.json
-    accelerate launch main.py \
+    python main.py \
             --model $org/$model \
             --task $task \
             --n_samples 50 \
-            --batch_size 50 \
             --max_length_generation 512 \
             --temperature 0.2 \
             --precision bf16 \
@@ -151,11 +150,10 @@ for lang in "${!langs[@]}"; do
     prefix="language: ${langs[$lang]}"
     echo "For language $lang, the prefix is: $prefix"
     generations_path=generations_$model/generations_$task\_$model.json
-    accelerate launch main.py \
+    python main.py \
             --model $org/$model \
             --task multiple-l$ang \
             --n_samples 5 \
-            --batch_size 5 \
             --limit 8 \
             --max_length_generation 512 \
             --temperature 0.2 \
@@ -170,11 +168,10 @@ done
 ```
 Replit model command (pull code from this [PR](https://github.com/bigcode-project/bigcode-evaluation-harness/pull/115)):
 ```bash
-accelerate launch main.py \
+python main.py \
     --model replit/replit-code-v1-3b \
     --tasks multiple-$lang \
     --max_length_generation 512 \
-    --batch_size 50 \
     --n_samples 10 \
     --temperature 0.2 \
     --precision fp16 \
@@ -198,14 +195,4 @@ accelerate launch main.py \
             \"softmax_scale\": null\
         }\
     }'
-```
-
-## Bonus
-For the throughput and peak memory measurments, we point you to [optimum-benchamrk](https://github.com/huggingface/optimum-benchmark) (checkout commit `49f0924e2bb041cf17d78dd0848d8e2cad31632d` [here](https://github.com/huggingface/optimum-benchmark/commit/49f0924e2bb041cf17d78dd0848d8e2cad31632d)).
-You can follow the instructions in the repo, copy our config yaml and run the command below:
-```bash
-cp throughput_config.yaml optimum-benchmark/examples
-device=cuda:0
-batch=1
-optimum-benchmark --config-dir examples --config-name throughput_config model=$org/$model device=$device benchmark.input_shapes.batch_size=$batch
 ```

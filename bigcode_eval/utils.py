@@ -1,19 +1,14 @@
-import json
-import math
 import re
 import warnings
-from collections import defaultdict
 from typing import List, Optional
-
-import torch
+from vllm import SamplingParams
 from torch.utils.data import IterableDataset
-from tqdm import tqdm
 
 INFILL_MODE = False
 INSTRUCTION_MODE = False
 
 
-class TokenizedDataset(IterableDataset):
+class PrompBatcher(IterableDataset):
     """Tokenize and preprocess the dataset
     Multiple copies of the same prompt are sent sequentially. See compute_code for more details.
     The prompt can either be:
@@ -26,24 +21,28 @@ class TokenizedDataset(IterableDataset):
         task,
         dataset,
         tokenizer,
-        num_devices,
         max_length,
+        n_tasks,
         limit_start=0,
-        n_tasks=None,
-        n_copies=1,
         prefix="",
         instruction_tokens=None,
+        continuous_batching_size=None
     ):
         self.task = task
         self.dataset = dataset
         self.tokenizer = tokenizer
-        self.num_devices = num_devices
         self.max_length = max_length
         self.limit_start = limit_start
         self.n_tasks = n_tasks
-        self.n_copies = n_copies
         self.prefix = prefix
         self.instruction_tokens = instruction_tokens
+        if continuous_batching_size:
+            if n_tasks > continuous_batching_size:
+                self.continuous_batching_size = continuous_batching_size
+            else: 
+                self.continuous_batching_size = n_tasks
+        else:
+            self.continuous_batching_size = None
 
     def __iter__(self):
         prompts = []
@@ -83,33 +82,16 @@ class TokenizedDataset(IterableDataset):
         global INSTRUCTION_MODE
         INFILL_MODE = infill[0]
         INSTRUCTION_MODE = instruction[0]
-        if INFILL_MODE:
-            return_token_type_ids = False
-        else:
-            return_token_type_ids = None  # default
-
-        outputs = self.tokenizer(
-            prompts,
-            padding=True,
-            truncation=True,
-            return_tensors="pt",
-            max_length=self.max_length,
-            return_token_type_ids=return_token_type_ids,
-        )
-
-        if self.n_copies == 1 and self.n_tasks % self.num_devices != 0:
-            self.n_copies = 2
-            warnings.warn(
-                "n_copies (n_samples/batch_size) was changed from 1 to 2 because n_tasks isn't proportional to num devices"
+        if INFILL_MODE and INSTRUCTION_MODE:
+            raise ValueError(
+                "Cannot avail instruction following and infilling modes at once"
             )
+        if self.continuous_batching_size:
+            for start_index in range(0, len(prompts), self.continuous_batching_size):
+                yield prompts[start_index: min(start_index+self.continuous_batching_size, len(prompts))]
+        else: 
+            yield prompts
 
-        for sample in range(self.n_tasks):
-            for _ in range(self.n_copies):
-                yield {
-                    "ids": outputs.input_ids[sample],
-                    "task_id": sample,
-                    "input_len": outputs.attention_mask[sample].sum(),
-                }
 
     def _make_infill_prompt(self, prefix, suffix, preprefix=""):
         """Make a prompt for infilling.
@@ -195,81 +177,72 @@ def _parse_instruction(code, instruction_tokens):
 
 def complete_code(
     task,
-    accelerator,
     model,
     tokenizer,
-    dataloader,
-    n_tasks,
+    prompt_batched_iterator,
+    args,
     limit_start=0,
-    batch_size=20,
     prefix="",
     instruction_tokens=None,
-    postprocess=True,
-    intermediate_save_generations_path: Optional[str] = None,
-    **gen_kwargs,
+    postprocess=True
 ):
-    """Generate multiple codes for each task in the dataset using multiple GPUs with accelerate.
-    dataloader sends all the prompts from the evalution dataset to the model as the following:
-    [p_0_0, p_0_1, ..., p_0_nc-1, p_1_0, ..., p_nt-1_nc-1] where nc is the number of copies of the prompt,
-    and nt is the number of tasks. nc is such that num_samples(for each task)= nc * batch_size
-    """
     # keep track of the list of generated codes
     # where len(code_gens) = n_tasks and len(code_gens[0]) = number of generated code samples
-    code_gens: List[List[Optional[str]]] = [[] for _ in range(n_tasks)]
-    generations = []
-    gen_token_dict = defaultdict(list)  # dict of list of generated tokens
-    for step, batch in tqdm(
-        enumerate(dataloader),
-        total=math.ceil(
-            n_tasks * dataloader.dataset.n_copies / accelerator.num_processes
-        ),
-    ):
-        with torch.no_grad():
-            if task.stop_words:
-                # Set the start_length after which to check for stopping to be the longest input ignoring padding
-                max_len = batch["input_len"].max().item()
-                gen_kwargs["stopping_criteria"][0].start_length = max_len
-            if hasattr(task, "max_length_multiplier") and task.max_length_multiplier:
-                idx = 1 if task.stop_words else 0
-                gen_kwargs["stopping_criteria"][idx].input_length = (
-                    batch["input_len"].max().item()
-                )
-
-            inputs = batch["ids"][:, : batch["input_len"]] if tokenizer.padding_side == "right" else batch["ids"]
-
-            generated_tokens = model.generate(
-                input_ids=inputs,
-                num_return_sequences=batch_size,
-                **gen_kwargs,
+    code_gens = []
+    batch_id = 0
+    for prompts in prompt_batched_iterator:
+        print(f"Handling continuous batch {batch_id} of size {len(prompts)}.")
+        if INFILL_MODE:
+            # Treat eos token as a regular stop word not removing it from the output
+            # If it's removed it may have the effect of removing it in the middle of a
+            # longer generation in case a batch size > 1 is used, which will result in
+            # a wrong generation as it won't be used for splitting lateron
+            sampling_params = SamplingParams(
+                n=args.n_samples,
+                top_p=args.top_p,
+                top_k=args.top_k,
+                temperature=args.temperature,
+                max_tokens=args.max_length_generation,
+                repetition_penalty=args.repetition_penalty,
+                frequency_penalty=args.frequency_penalty,
+                presence_penalty=args.presence_penalty,
+                stop=task.stop_words,
+                skip_special_tokens=False,
+                spaces_between_special_tokens=True
             )
-            # each task is generated batch_size times
-            generated_tasks = batch["task_id"].repeat(batch_size)
-            generated_tokens = accelerator.pad_across_processes(
-                generated_tokens, dim=1, pad_index=tokenizer.pad_token_id
-            )
+        else:
+            sampling_params = SamplingParams(
+                n=args.n_samples,
+                top_p=args.top_p,
+                top_k=args.top_k,
+                temperature=args.temperature,
+                max_tokens=args.max_length_generation,
+                repetition_penalty=args.repetition_penalty,
+                frequency_penalty=args.frequency_penalty,
+                presence_penalty=args.presence_penalty,
+                stop=task.stop_words
+            )            
+        batch_outputs = model.generate(
+            prompts=prompts,
+            sampling_params=sampling_params,
+        )
+        for sample_output in batch_outputs:
+            sample_gens = []
+            for generation in sample_output.outputs:
+                sample_gens.append(sample_output.prompt+generation.text)
+            code_gens.append(sample_gens)
 
-            generated_tokens, generated_tasks = accelerator.gather(
-                (generated_tokens, generated_tasks)
-            )
-            generated_tokens = generated_tokens.cpu().numpy()
-            generated_tasks = generated_tasks.cpu().numpy()
+        batch_id+=1
 
-            for sample, generated_tokens in zip(generated_tasks, generated_tokens):
-                gen_token_dict[sample].append(generated_tokens)
-
-    code_gens = update_code_gens(
+    return update_code_gens(
         task,
         tokenizer,
         limit_start,
         prefix,
         instruction_tokens,
         postprocess,
-        code_gens,
-        gen_token_dict,
+        code_gens
     )
-
-    generations.extend(code_gens)
-    return generations
 
 
 def update_code_gens(
@@ -279,48 +252,39 @@ def update_code_gens(
     prefix,
     instruction_tokens,
     postprocess,
-    code_gens,
-    gen_token_dict,
+    code_gens
 ):  
-    for sample, generated_tokens in gen_token_dict.items():
-        for s in generated_tokens:
+    updated_code_gens = []
+    for sample_id, sample_gens in enumerate(code_gens):
+        updated_sample_gens = []
+        for generation in sample_gens:
             if INFILL_MODE or tokenizer.eos_token in task.stop_words:
-                if s[0] == tokenizer.bos_token_id:
-                    s = s[1:]
-                # Treat eos token as a regular stop word not removing it from the output
-                # If it's removed it may have the effect of removing it in the middle of a
-                # longer generation in case a batch size > 1 is used, which will result in
-                # a wrong generation as it won't be used for splitting lateron
-                gen_code = tokenizer.decode(
-                    s, skip_special_tokens=False, clean_up_tokenization_spaces=False
-                )
+                if generation.startswith(tokenizer.bos_token):
+                    generation = generation[len(tokenizer.bos_token):]
                 try:
                     # some tokenizers add a multi-token prefix to the generation (e.g ChatGLM)
                     tokenizer_prefix = tokenizer.decode(tokenizer.get_prefix_tokens())
-                    if gen_code.startswith(f"{tokenizer_prefix}"):
-                        gen_code = gen_code[len(tokenizer_prefix):].lstrip()
+                    if generation.startswith(f"{tokenizer_prefix}"):
+                        generation = generation[len(tokenizer_prefix):].lstrip()
                 except:
                     pass
                 if INFILL_MODE:
-                    gen_code = _parse_infill(gen_code, tokenizer)
+                    generation = _parse_infill(generation, tokenizer)
                 if INSTRUCTION_MODE:
-                    gen_code = _parse_instruction(gen_code, instruction_tokens)
-            else:
-                gen_code = tokenizer.decode(
-                    s, skip_special_tokens=True, clean_up_tokenization_spaces=True
-                )
+                    generation = _parse_instruction(generation, instruction_tokens)
             if not INFILL_MODE:
-                gen_code = gen_code[len(prefix) :]
+                generation = generation[len(prefix) :]
             if postprocess:
-                code_gens[sample].append(
-                    task.postprocess_generation(gen_code, int(sample) + limit_start)
+                updated_sample_gens.append(
+                    task.postprocess_generation(generation, int(sample_id) + limit_start)
                 )
             else:
                 warnings.warn(
                     "model output is not postprocessed, this might lower evaluation scores"
                 )
-                code_gens[sample].append(gen_code)
-    return code_gens
+                updated_sample_gens.append(generation)
+        updated_code_gens.append(updated_sample_gens)
+    return updated_code_gens
 
 
 def remove_after_return(code):

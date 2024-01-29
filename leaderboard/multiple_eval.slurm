@@ -32,7 +32,6 @@ CMD="\
     --model $org/$model \
     --tasks $task \
     --max_length_generation 512 \
-    --batch_size 50 \
     --n_samples 50 \
     --temperature 0.2 \
     --precision bf16 \
@@ -44,7 +43,7 @@ CMD="\
     --save_generations_path $out_path/generations_$task\_$model.json \
 "
 
-export LAUNCHER="accelerate launch \
+export LAUNCHER="python \
     --multi_gpu \
     --num_machines $NNODES \
     --num_processes $WORLD_SIZE \
