@@ -3,7 +3,10 @@ import torch
 import numpy as np
 import random
 
-from bigcode_eval.utils import PrompBatcher, complete_code
+from bigcode_eval.utils import (
+    PrompBatcher, 
+    complete_code
+)
 
 
 def set_seed(seed=77):

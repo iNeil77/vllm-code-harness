@@ -20,7 +20,7 @@ In this evaluation harness, we include tasks with unit tests, but also some task
 Before diving into the tasks, here are some instructions that stand for all the benchmarks:
   * Adapt `max_length_generation` based on your model's context size and task, by default it is 512. This value is enough for tasks like HumanEval and MBPP but some tasks such as APPS require a larger value because the prompts are long, you can use the full model's context size.
   * `allow_code_execution` allows the execution of the model-generated (untrusted) code on your machine, please read carefully the displayed warning before calling it (it is off by default). 
-  * You can adapt the text generation parameter by changing `do_sample`, `top_p` and `temperature` parameters. 
+  * You can adapt the text generation parameter by changing `top_p` and `temperature` parameters. 
   * Some models, such as [InCoder](https://huggingface.co/facebook/incoder-6B), might require adding a prefix before the prompt to give a hint about the language. To add the prefix for InCoder to indicate Python language for example, set `prefix` argument to `"<| file ext=.py |>\n"`.
   * The generations are saved with `save_generations` that should be called during the execution, you can visualize the post-processed model generations used for the evaluation. You also have the option of saving the references, it can be useful for tasks that use BLEU score and actual solutions as references, you just need to `save_references`.
   * For experimenting, you can choose the number of tasks to evaluate on instead of using the whole test set with the `limit` argument, try using a number that is proportional to your number of devices.
@@ -30,7 +30,7 @@ Before diving into the tasks, here are some instructions that stand for all the 
 ### HumanEval
 [HumanEval](https://huggingface.co/datasets/openai_humaneval): 164 handwritten Python programming problems with a function signature, docstring, body, and several unit tests.
 
-* Prompts & generation: in a zero-shot setting, we use function signatures as prompts to the models and generate code until some stop words. By default, top-p sampling is used with $p=0.95$ (same for the other tasks unless we say otherwise), this is set using the arguments `do_sample` and `top_p`. 
+* Prompts & generation: in a zero-shot setting, we use function signatures as prompts to the models and generate code until some stop words. By default, top-p sampling is used with $p=0.95$ (same for the other tasks unless we say otherwise), this is set using the arguments `top_p`. To force greedy generations set `temperature` to a value less than $1e-5$.
 We follow Chen et al. approach for pass@k estimation, where $n=200 > k$ solutions are generated per problem for the estimation of the success rate (`n_samples=200`).
 * Evaluation: we evaluate the pass@1, pass@10 and pass@100 for a given temperature.
 
@@ -234,7 +234,6 @@ python  main.py \
     --tasks multiple-py  \
     --max_length_generation 650 \
     --temperature 0.8   \
-    --do_sample True  \
     --n_samples 200  \
     --trust_remote_code \
     --generation_only \
@@ -332,7 +331,6 @@ python  main.py \
   --model <MODEL_NAME> \
   --max_length_generation 1024 \
   --tasks <TASK> \
-  --do_sample False \
   --n_samples 1 \
   --allow_code_execution
 ```
@@ -439,7 +437,6 @@ python main.py \
   --max_length_generation <MAX_LENGTH> \
   --tasks pal-gsm8k-greedy \
   --n_samples 1 \
-  --do_sample False \
   --allow_code_execution
 ```
 

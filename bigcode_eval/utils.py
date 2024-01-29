@@ -1,6 +1,5 @@
 import re
 import warnings
-from typing import List, Optional
 from vllm import SamplingParams
 from torch.utils.data import IterableDataset
 

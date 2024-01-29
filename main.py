@@ -1,6 +1,5 @@
 import os
 import json
-
 import datasets
 import torch
 import transformers
@@ -26,7 +25,7 @@ def main():
     transformers.logging.set_verbosity_error()
     datasets.logging.set_verbosity_error()
     task = pattern_match(args.tasks.split(","), ALL_TASKS)
-
+    os.environ["TOKENIZERS_PARALLELISM"] = "false"
     results = {}
     if args.load_generations_path:
         # here we don't generate code but only evaluate previously computed generations
@@ -87,13 +86,13 @@ def main():
 
         model = LLM(
             model=args.model, 
-            tokenizer=tokenizer,
             tensor_parallel_size=1, 
             dtype=dict_precisions[args.precision],
             trust_remote_code=args.trust_remote_code,
             gpu_memory_utilization=args.gpu_memory_utilization,
             swap_space=args.swap_space,
         )
+        model.set_tokenizer(tokenizer=tokenizer)
 
         evaluator = Evaluator(model, tokenizer, args)
         if args.generation_only:

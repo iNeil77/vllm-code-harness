@@ -18,8 +18,14 @@ described in the paper "Evaluating Large Language Models Trained on Code"
 
 import itertools
 import os
-from collections import Counter, defaultdict
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from collections import (
+    Counter, 
+    defaultdict
+)
+from concurrent.futures import (
+    ThreadPoolExecutor, 
+    as_completed
+)
 
 import numpy as np
 

@@ -1,4 +1,3 @@
-import argparse
 import subprocess
 from pathlib import Path
 from sys import exit

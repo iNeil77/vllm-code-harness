@@ -86,7 +86,6 @@ python main.py \
   --limit <NUMBER_PROBLEMS> \
   --max_length_generation <MAX_LENGTH> \
   --temperature <TEMPERATURE> \
-  --do_sample True \
   --n_samples 100 \
   --precision <PRECISION> \
   --allow_code_execution \
@@ -157,7 +156,6 @@ python  main.py \
     --tasks multiple-py  \
     --max_length_generation 650 \
     --temperature 0.8   \
-    --do_sample True  \
     --n_samples 200  \
     --trust_remote_code \
     --generation_only \

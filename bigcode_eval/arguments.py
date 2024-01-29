@@ -1,4 +1,7 @@
-from dataclasses import dataclass, field
+from dataclasses import (
+    dataclass, 
+    field
+)
 from typing import Optional
 from bigcode_eval.tasks import ALL_TASKS
 import fnmatch
@@ -18,153 +21,156 @@ def pattern_match(patterns, source_list):
 @dataclass
 class ModelArguments:
     model: str = field(
-        help="Model to evaluate, provide a repo name in Hugging Face hub or a local path",
+        metadata={"help":"Model to evaluate, provide a repo name in Hugging Face hub or a local path"}
     )
     use_auth_token: Optional[bool] = field(
         default=True,
-        help="Use the token generated when running `huggingface-cli login` (necessary for private model).",
+        metadata={"help":"Use the token generated when running `huggingface-cli login` (necessary for private model)."}
     )
     trust_remote_code: Optional[bool] = field(
         default=True,
-        help="Use a model with custom code, this requires executing code by the author of the model.",
+        metadata={"help":"Use a model with custom code, this requires executing code by the author of the model."}
     )
     precision: Optional[str] = field(
         default="fp32",
-        help="Model precision, from: fp32, fp16 or bf16",
+        metadata={"help":"Model precision, from: fp32, fp16 or bf16"}
     )
     left_padding: Optional[bool] = field(
         default=False,
-        help="Force left padding, needed for models like chatglm3-6b",
+        metadata={"help":"Force left padding, needed for models like chatglm3-6b"}
     )
 
 @dataclass
 class WorkflowArguments:
     tasks: str = field(
-        help=f"Evaluation tasks from {ALL_TASKS}",
+        metadata={"help":f"Evaluation tasks from {ALL_TASKS}"},
     )
     instruction_tokens: Optional[str] = field(
         default=None,
-        help="A series of instruction tokens used for instruction-tuning benchamrks separated by comma e.g. <user_message>,<end_user_message>,<assistant_message>",
+        metadata={"help":"A series of instruction tokens used for instruction-tuning benchamrks" 
+                  + "separated by comma e.g. <user_message>,<end_user_message>,<assistant_message>"}
     )
     metric_output_path: Optional[str] = field(
         default="evaluation_results.json",
-        help="Path to save the results",
+        metadata={"help":"Path to save the results"}
     )
     save_generations: Optional[bool] = field(
         default=True,
-        help="Whether to save code generations",
+        metadata={"help":"Whether to save code generations"}
     )
     save_generations_path: Optional[str] = field(
         default="generations.json",
-        help="Path for saving the code generations",
+        metadata={"help":"Path for saving the code generations"}
     )
     save_references: Optional[bool] = field(
         default=True,
-        help="Whether to save reference solutions/tests",
+        metadata={"help":"Whether to save reference solutions/tests"}
     )
     save_references_path: Optional[str] = field(
         default="references.json",
-        help="Path for saving the references solutions/tests",
+        metadata={"help":"Path for saving the references solutions/tests"}
     )
     prompt: Optional[str] = field(
         default="prompt",
-        help="Prompt type to use for generation in HumanEvalPack tasks",
+        metadata={"help":"Prompt type to use for generation in HumanEvalPack tasks"}
     )
     prefix: Optional[str] = field(
         default="",
-        help="Prefix to add to the prompt. For example InCoder needs prefix='<| file ext=.py |>\n'",
+        metadata={"help":"Prefix to add to the prompt. For example InCoder needs prefix='<| file ext=.py |>\n'"}
     )
     seed: Optional[int] = field(
         default=0, 
-        help="Random seed used for evaluation."
+        metadata={"help":"Random seed used for evaluation."}
     )
     limit: Optional[int] = field(
         default=None,
-        help="Number of samples to solve and evaluate from the benchmark",
+        metadata={"help":"Number of samples to solve and evaluate from the benchmark"}
     )
     limit_start: Optional[int] = field(
         default=0,
-        help="Optional offset to start from when limiting the number of samples",
+        metadata={"help":"Optional offset to start from when limiting the number of samples"}
     )
     postprocess: Optional[bool] = field(
         default=True,
-        help="Postprocess model outputs before execution, always on except during generation tests",
+        metadata={"help":"Postprocess model outputs before execution, always on except during generation tests"}
     )
     allow_code_execution: Optional[bool] = field(
         default=True,
-        help="Allow code evaluation to execute external/untrusted Python code on your machine",
+        metadata={"help":"Allow code evaluation to execute external/untrusted Python code on your machine"}
     )
     generation_only: Optional[bool] = field(
         default=False,
-        help="Do code generation but no evaluation",
+        metadata={"help":"Do code generation but no evaluation"}
     )
     load_generations_path: Optional[str] = field(
         default=None,
-        help="Path of file with previously generated solutions, if provided generation is skipped and only evaluation is done",
+        metadata={"help":"Path of file with previously generated solutions, if provided generation is"
+                  + "skipped and only evaluation is done"}
     )
     load_data_path: Optional[str] = field(
         default=None,
-        help="Path of additional data to load for the tasks",
+        metadata={"help":"Path of additional data to load for the tasks"}
     )
 
 @dataclass
 class VLLMArguments:
     gpu_memory_utilization: Optional[float] = field(
         default=0.95,
-        help="Proportion of GPU memory to reserve for vllm",
+        metadata={"help":"Proportion of GPU memory to reserve for vllm"}
     )
     swap_space: Optional[int] = field(
         default=64,
-        help="RAM memory to reserve for excess GPU pages",
+        metadata={"help":"RAM memory to reserve for excess GPU pages"}
     )
     continuous_batching_size: Optional[int] = field(
         default=None,
-        help="The number of dataset samples to be sent at a time for vllm to apply continuous batching."
-            + "If None (default), all the prompts are sent to the LLM Engine together. Make sure to"
-            + "modify the CPU swap_space as you modify this parameter or you may get OOM errors."
+        metadata={"help":"The number of dataset samples to be sent at a time for vllm to apply continuous batching. "
+            + "If None (default), all the prompts are sent to the LLM Engine together. Make sure to "
+            + "modify the CPU swap_space as you modify this parameter or you may get OOM errors."}
     )
 
 @dataclass
 class GenerationArguments:
     temperature: Optional[float] = field(
         default=0.2, 
-        help="Sampling temperature used for generation." 
-            + "Temperatures lower than 1e-5 will leads to switching to greedy mode."
+        metadata={"help":"Sampling temperature used for generation. " 
+            + "Temperatures lower than 1e-5 will leads to switching to greedy mode."}
     )
     top_k: Optional[int] = field(
-        default=0, 
-        help="Top-k parameter used for generation."
+        default=-1, 
+        metadata={"help":"Top-k parameter used for generation. Disabled (-1) by default. "
+                  + "Set to an integer of at least 1 to enable."}
     )
     top_p: Optional[float] = field(
         default=0.95, 
-        help="Top-p parameter used for nucleus sampling."
+        metadata={"help":"Top-p parameter used for nucleus sampling."}
     )
     n_samples: Optional[int] = field(
         default=1,
-        help="Number of completions to generate for each sample.",
+        metadata={"help":"Number of completions to generate for each sample."}
     )
     repetition_penalty: Optional[float] = field(
         default=1.0, 
-        help="Float that penalizes new tokens based on whether"
-            + "they appear in the prompt and the generated text so far. Values > 1"
-            + "encourage the model to use new tokens, while values < 1 encourage"
-            + "the model to repeat tokens."
+        metadata={"help":"Float that penalizes new tokens based on whether "
+            + "they appear in the prompt and the generated text so far. Values > 1 "
+            + "encourage the model to use new tokens, while values < 1 encourage "
+            + "the model to repeat tokens."}
     )
     frequency_penalty: Optional[float] = field(
         default=0.0, 
-        help="Float that penalizes new tokens based on their"
-            + "frequency in the generated text so far. Values > 0 encourage the"
-            + "model to use new tokens, while values < 0 encourage the model to"
-            + "repeat tokens."
+        metadata={"help":"Float that penalizes new tokens based on their "
+            + "frequency in the generated text so far. Values > 0 encourage the "
+            + "model to use new tokens, while values < 0 encourage the model to "
+            + "repeat tokens."}
     )
     presence_penalty: Optional[float] = field(
         default=0.0, 
-        help="Float that penalizes new tokens based on whether they"
-            + "appear in the generated text so far. Values > 0 encourage the model"
+        metadata={"help":"Float that penalizes new tokens based on whether they "
+            + "appear in the generated text so far. Values > 0 encourage the model "
             + "to use new tokens, while values < 0 encourage the model to repeat"
-            + "tokens."
+            + "tokens."}
     )
     max_length_generation: Optional[int] = field(
         default=512,
-        help="Maximum length of generated sequence (prompt+generation)",
+        metadata={"help":"Maximum length of generated sequence (prompt+generation)"}
     )
