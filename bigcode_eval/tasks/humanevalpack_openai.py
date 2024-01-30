@@ -240,5 +240,5 @@ if __name__ == '__main__':
         print("parse error rate:", parse_errors / len(samples))
 
     results_filename = f"completions_{LANGUAGE}_{TASK}.jsonl"
-    with jsonlines.open(results_filename, "w") as writer:
+    with jsonlines.open(results_filename, "w+") as writer:
         writer.write_all(samples)

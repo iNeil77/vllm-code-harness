@@ -114,8 +114,8 @@ def main():
     if not args.generation_only:
         dumped = json.dumps(results, indent=2)
         print(dumped)
-
-        with open(args.metric_output_path, "w") as f:
+        os.makedirs(os.path.dirname(args.metric_output_path), mode=744, exist_ok=True)
+        with open(args.metric_output_path, "w+") as f:
             f.write(dumped)
 
 

@@ -81,7 +81,7 @@ def main(eval_script, language, extension):
         Path(__file__).parent, "..", "results", language.lower() + ".csv"
     ).resolve()
 
-    with open(results_file, "w") as f:
+    with open(results_file, "w+") as f:
         for i in files_index:
             filepath = files_sorted[i]
             if filepath is None:
@@ -136,7 +136,7 @@ def main_check_stubs(check_script, language, extension):
         Path(__file__).parent, "..", "check_results", language.lower() + ".csv"
     ).resolve()
 
-    with open(results_file, "w") as f:
+    with open(results_file, "w+") as f:
         for i in files_index:
             filepath = files_sorted[i]
             if filepath is None:

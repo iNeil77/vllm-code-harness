@@ -449,7 +449,7 @@ class HumanEvalPackGenerative(HumanEvalPack):
             num_workers=num_workers,
         )
         # Write logs to json
-        with open("logs.json", "w") as f:
+        with open("logs.json", "w+") as f:
             json.dump(logs, f, indent=4, ensure_ascii=False)
 
         """Debugging help

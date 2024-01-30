@@ -84,5 +84,5 @@ def evaluate_problem(
             range(min_problem, num_problems),
         ):
             test_results["results"].append(j)
-            with open(test_results_path, "w") as f:
+            with open(test_results_path, "w+") as f:
                 f.write(json.dumps(test_results, indent=2))

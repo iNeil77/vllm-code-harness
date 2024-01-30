@@ -79,7 +79,7 @@ class GeneralDS1000(Task):
     def _download_source(self):
         url = "https://github.com/HKUNLP/DS-1000/blob/49c1c543ada8b58138181333cdc62e613204efcf/ds1000.py?raw=true"
         lock = self._src.with_suffix(".lock")
-        with open(lock, "w") as f_lock:
+        with open(lock, "w+") as f_lock:
             fcntl.flock(f_lock, fcntl.LOCK_EX)
             if not self._src.exists():
                 warnings.warn(f"DS-1000 source is being saved to {self._src}.")
@@ -87,14 +87,14 @@ class GeneralDS1000(Task):
                 r = requests.get(url, stream=True)
                 with open(self._src, "wb") as f_src:
                     f_src.write(r.content)
-                open(self._src.parent / "__init__.py", "w").close()
+                open(self._src.parent / "__init__.py", "w+").close()
                 print("Done.")
             fcntl.flock(f_lock, fcntl.LOCK_UN)
 
     def _download_dataset(self):
         url = "https://github.com/HKUNLP/DS-1000/blob/49c1c543ada8b58138181333cdc62e613204efcf/ds1000_data.zip?raw=true"
         lock = self._data.with_suffix(".lock")
-        with open(lock, "w") as f_lock:
+        with open(lock, "w+") as f_lock:
             fcntl.flock(f_lock, fcntl.LOCK_EX)
             if not self._data.exists():
                 warnings.warn(f"DS-1000 data is being saved to {self._data}.")
