@@ -51,7 +51,7 @@ class WorkflowArguments:
                   + "separated by comma e.g. <user_message>,<end_user_message>,<assistant_message>"}
     )
     metric_output_path: Optional[str] = field(
-        default="evaluation_results.json",
+        default="/tmp/evaluation_results.json",
         metadata={"help":"Path to save the results"}
     )
     save_generations: Optional[bool] = field(
@@ -59,7 +59,7 @@ class WorkflowArguments:
         metadata={"help":"Whether to save code generations"}
     )
     save_generations_path: Optional[str] = field(
-        default="generations.json",
+        default="/tmp/generations.json",
         metadata={"help":"Path for saving the code generations"}
     )
     save_references: Optional[bool] = field(
@@ -67,7 +67,7 @@ class WorkflowArguments:
         metadata={"help":"Whether to save reference solutions/tests"}
     )
     save_references_path: Optional[str] = field(
-        default="references.json",
+        default="/tmp/references.json",
         metadata={"help":"Path for saving the references solutions/tests"}
     )
     prompt: Optional[str] = field(

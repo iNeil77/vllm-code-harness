@@ -98,13 +98,11 @@ def main():
         if args.generation_only:
             print("generation mode only")
             generations, references = evaluator.generate_text(task)
-            save_generations_path = f"{os.path.splitext(args.save_generations_path)[0]}_{task}.json"
-            save_references_path = f"references_{task}.json"
             evaluator.save_json_files(
                 generations,
                 references,
-                save_generations_path,
-                save_references_path,
+                args.save_generations_path,
+                args.save_references_path,
             )
         else:
             results[task] = evaluator.evaluate(task)
