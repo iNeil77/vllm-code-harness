@@ -50,7 +50,7 @@ class GeneralAPPS(Task):
     DATASET_PATH = "codeparrot/apps"
     DATASET_NAME = None
 
-    def __init__(self, level, k_list=[1, 10, 100]):
+    def __init__(self, level, k_list=[1, 10, 25]):
         self.DATASET_NAME = level
         super().__init__(
             stop_words=["\nQUESTION", "\n---", "\nANSWER"],

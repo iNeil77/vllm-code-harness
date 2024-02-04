@@ -72,7 +72,7 @@ Args:
         of strings with several code candidates to solve the problem.
     references: a list with a test for each prediction. Each test should evaluate the
         correctness of a code candidate.
-    k: number of code candidates to consider in the evaluation (Default: [1, 10, 100])
+    k: number of code candidates to consider in the evaluation (Default: [1, 10, 25])
     num_workers: number of workers used to evaluate the canidate programs (Default: 4).
     timeout:
 Returns:
@@ -132,7 +132,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE."""
 
-def compute_code_eval(predictions, references, k=[1, 10, 100], num_workers=4, timeout=3.0):
+def compute_code_eval(predictions, references, k=[1, 10, 25], num_workers=4, timeout=3.0):
     """Returns the scores"""
 
     if os.getenv("HF_ALLOW_CODE_EVAL", 0) != "1":

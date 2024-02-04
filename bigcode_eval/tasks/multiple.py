@@ -180,7 +180,7 @@ class GeneralMultiPLE(Task):
         )
         results = {
             f"pass@{k}": v
-            for k, v in zip([1, 10, 100], result)
+            for k, v in zip([1, 10, 25], result)
             if k <= len(generations[0])
         }
         return results
