@@ -1,6 +1,6 @@
 import json
 import re
-
+import os
 from evaluate import load
 from bigcode_eval.base import Task
 
@@ -53,7 +53,7 @@ LANGUAGE_TO_TIMEOUT = {
     "cpp": 60,
     "js": 10,
     "java": 10,
-    "go": 20,
+    "go": 60,
     "rust": 300, # Necessary for first-time compilation of cargo
 }
 
@@ -321,7 +321,7 @@ class HumanEvalPackGenerative(HumanEvalPack):
                         generation = new_generation
                         break
 
-        gen = self.remove_last_block(generation.rstrip())
+        generation = self.remove_last_block(generation.rstrip())
         return prompt + generation
         
     def process_results(self, generations, references):
@@ -451,7 +451,8 @@ class HumanEvalPackGenerative(HumanEvalPack):
             num_workers=num_workers,
         )
         # Write logs to json
-        with open("logs.json", "w+") as f:
+        os.makedirs(f"/Outputs/Exec_Logs/{language}", exist_ok=True)
+        with open(f"/Outputs/Exec_Logs/{language}/compile_logs.json", "a") as f:
             json.dump(logs, f, indent=4, ensure_ascii=False)
 
         """Debugging help
@@ -465,17 +466,20 @@ class HumanEvalPackGenerative(HumanEvalPack):
                 timeout=timeout,
             )
             print("Took: ", time.time() - starttime)
-            with open("errors.txt", "a") as f:
+            os.makedirs(f"/Outputs/Exec_Logs/{language}", exist_ok=True)
+            with open(f"/Outputs/Exec_Logs/{language}/errors.txt", "a") as f:
                 f.write(log[0][0][1]["result"] + "\n")
-            if ("compilation error" in log[0][0][1]["result"]):
-                print("Result")
-                print(results)
-                print("Log")
-                print(log)
-                print("Gen")
-                print(gen[0])
-                print("Ref")
-                print(ref)
+
+            print("Result")
+            print(results)
+            print("Log")
+            print(log)
+            print("Gen")
+            print(gen[0])
+            print("Ref")
+            print(ref)
+            print("\n=====delim=====\n")
+        print(results)
         """
         return results
 
