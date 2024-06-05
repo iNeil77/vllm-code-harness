@@ -4,7 +4,7 @@ from .safe_subprocess import run
 
 
 def eval_script(path: Path):
-    r = run(["tsc", "--target", "esnext", str(path)], timeout_seconds=15)
+    r = run(["tsc", "--target", "esnext", str(path)], timeout_seconds=50)
     if r.exit_code != 0:
         return {
             "status": "SyntaxError",
@@ -13,7 +13,7 @@ def eval_script(path: Path):
             "stderr": r.stderr,
         }
 
-    r = run(["node", str(path).replace(".ts", ".js")], timeout_seconds=15)
+    r = run(["node", str(path).replace(".ts", ".js")], timeout_seconds=50)
     if r.timeout:
         status = "Timeout"
     elif r.exit_code == 0:

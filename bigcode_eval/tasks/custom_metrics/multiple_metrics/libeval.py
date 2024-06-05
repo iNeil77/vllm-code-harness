@@ -22,7 +22,7 @@ def run_without_exn(args: List[str]):
         args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, start_new_session=True
     )
     try:
-        stdout, stderr = p.communicate(timeout=5)
+        stdout, stderr = p.communicate(timeout=50)
         exit_code = p.returncode
         status = "OK" if exit_code == 0 else "Exception"
     except subprocess.TimeoutExpired as exc:

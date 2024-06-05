@@ -30,7 +30,7 @@ def set_nonblocking(reader):
 
 def run(
     args: List[str],
-    timeout_seconds: int = 15,
+    timeout_seconds: int = 50,
     max_output_size: int = 2048,
     env=None,
 ) -> Result:

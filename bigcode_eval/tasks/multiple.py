@@ -11,7 +11,6 @@ import json
 import os
 import re
 import tempfile
-from multiprocessing import cpu_count
 from pathlib import Path
 
 import numpy as np
@@ -81,8 +80,9 @@ class GeneralMultiPLE(Task):
     DATASET_NAME = None
     DATASET_REVISION = "d23b094346c5dbda1080a74bb2a24c18adbf7409"
 
-    def __init__(self, language):
+    def __init__(self, language, num_workers=32):
         self.language = language
+        self.workers = min(num_workers, os.cpu_count() - 1)
         self.DATASET_NAME = f"humaneval-{language}"
         # we need the dataset to get stop words for each language
         self.dataset = load_dataset(
@@ -164,9 +164,8 @@ class GeneralMultiPLE(Task):
         )
 
         # execute the problems to evaluate them
-        max_workers = cpu_count() - 1 if cpu_count() > 1 else 1
         for file in tqdm(list_files):
-            evaluate_problem(temp_dir, file, max_workers)
+            evaluate_problem(temp_dir, file, self.workers)
 
         # compute pass@k scores
         result_array = np.array(

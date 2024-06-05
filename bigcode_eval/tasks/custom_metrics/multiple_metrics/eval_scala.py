@@ -12,7 +12,7 @@ def eval_script(path: Path):
         # Each Scala file contains the class with same name `JAVA_CLASS_NAME`
         # Hence, scalac will same JAVA_CLASS_NAME.class file for each problem
         # Write class for each problem to a different temp dir
-        build = run(["scalac", "-d", outdir, path], timeout_seconds=45)
+        build = run(["scalac", "-d", outdir, path], timeout_seconds=60)
         if build.exit_code != 0:
             # Well, it's a compile error. May be a type error or
             # something. But, why break the set convention

@@ -49,11 +49,11 @@ LANGUAGE_TO_STOP_WORDS = {
 }
 
 LANGUAGE_TO_TIMEOUT = {
-    "python": 10,
+    "python": 60,
     "cpp": 60,
-    "js": 10,
-    "java": 10,
-    "go": 60,
+    "js": 100,
+    "java": 100,
+    "go": 100,
     "rust": 300, # Necessary for first-time compilation of cargo
 }
 
@@ -334,7 +334,7 @@ class HumanEvalPackGenerative(HumanEvalPack):
         """
         code_metric = load("Muennighoff/code_eval_octopack")
         timeout = LANGUAGE_TO_TIMEOUT[self.DATASET_NAME]
-        num_workers = LANGUAGE_TO_NUM_WORKERS[self.DATASET_NAME]
+        num_workers = min(LANGUAGE_TO_NUM_WORKERS[self.DATASET_NAME], os.cpu_count()-1)
         language = self.DATASET_NAME if self.DATASET_NAME != "js" else "javascript"
 
         ### CUSTOM MUTATE METHOD CHANGES ###

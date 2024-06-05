@@ -35,7 +35,7 @@ EVALUATORS = {
     "humaneval_to_r.py": (eval_r.eval_script, ".r"),
     "jl": (eval_julia.eval_script, ".jl"),
     "ts": (eval_ts.eval_script, ".ts"),
-    "go": (eval_go.eval_script, ".go"),
+    "go": (eval_go.eval_script, "_test.go"),
     "pl": (eval_pl.eval_script, ".pl"),
     "sh": (eval_sh.eval_script, ".sh"),
     "scala": (eval_scala.eval_script, ".scala"),
@@ -46,11 +46,7 @@ def eval_string_script(language, program):
     if language in EVALUATORS:
         (eval_script, file_ext) = EVALUATORS[language]
     else:
-        eval_module = __import__(
-            f"eval_{language}" if language != "go_test.go" else "eval_go"
-        )
-        eval_script = eval_module.eval_script
-        file_ext = f".{language}" if language != "go_test.go" else "_test.go"
+        raise ValueError(f"Unsupported language: {language}")
     with tempfile.NamedTemporaryFile(suffix=file_ext, delete=True) as f:
         f.write(program.encode("utf-8"))
         f.flush()

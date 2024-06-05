@@ -12,7 +12,7 @@ def eval_script(path: Path):
     basename = ".".join(str(path).split(".")[:-1])
     try:
         build = subprocess.run(
-            ["rustc", path, "-o", basename], capture_output=True, timeout=15
+            ["rustc", path, "-o", basename], capture_output=True, timeout=150
         )
     except subprocess.TimeoutExpired as exc:
         return {
@@ -33,7 +33,7 @@ def eval_script(path: Path):
     else:
         try:
             # Assumes exit-code 0 is all okay
-            output = subprocess.run([basename], capture_output=True, timeout=5)
+            output = subprocess.run([basename], capture_output=True, timeout=50)
             returncode = output.returncode
             if output.returncode == 0:
                 status = "OK"

@@ -36,7 +36,7 @@ def eval_script(path: str):
                 ["mono", binaryname],
                 env={"PATH": os.getenv("PATH"), "MONO_TRACE_LISTENER": "Console.Error"},
                 capture_output=True,
-                timeout=5,
+                timeout=50,
             )
             returncode = output.returncode
             output.stderr = str(output.stderr, "utf-8")

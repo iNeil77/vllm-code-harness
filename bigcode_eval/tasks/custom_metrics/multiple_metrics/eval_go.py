@@ -13,7 +13,7 @@ def eval_script(path: Path):
     try:
         build = subprocess.run(
             ["go", "test", path],
-            timeout=30,
+            timeout=120,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )

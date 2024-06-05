@@ -11,6 +11,7 @@ Homepage: https://github.com/openai/human-eval
 
 from bigcode_eval.base import Task
 from bigcode_eval.tasks.custom_metrics.code_eval import compute_code_eval
+import os
 
 _CITATION = """
 @misc{chen2021evaluating,
@@ -47,14 +48,14 @@ class GeneralHumanEval(Task):
 
     DATASET_PATH = "openai_humaneval"
 
-    def __init__(self, strip_prompt, k=[1, 10, 25], num_workers=16, timeout=3.0):
+    def __init__(self, strip_prompt, k=[1, 10, 25, 100], num_workers=32, timeout=3.0):
         super().__init__(
             stop_words=["\nclass", "\ndef", "\n#", "\n@", "\nprint", "\nif", "\n```", "<file_sep>"],
             requires_execution=True,
         )
         self.strip_prompt = strip_prompt
         self.k = k
-        self.num_workers = num_workers
+        self.num_workers = min(num_workers, os.cpu_count()-1)
         self.timeout = timeout
 
     def get_dataset(self):
