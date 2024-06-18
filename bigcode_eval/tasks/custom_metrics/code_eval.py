@@ -72,7 +72,7 @@ Args:
         of strings with several code candidates to solve the problem.
     references: a list with a test for each prediction. Each test should evaluate the
         correctness of a code candidate.
-    k: number of code candidates to consider in the evaluation (Default: [1, 10, 25])
+    k: number of code candidates to consider in the evaluation (Default: [1, 10, 25, 100])
     num_workers: number of workers used to evaluate the canidate programs (Default: 4).
     timeout:
 Returns:
