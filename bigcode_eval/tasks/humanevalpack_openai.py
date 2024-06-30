@@ -202,7 +202,7 @@ if __name__ == '__main__':
     openai.organization = os.getenv("OPENAI_ORGANIZATION")
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    samples = [s for s in load_dataset("bigcode/humanevalpack", LANGUAGE)["test"]]
+    samples = [s for s in load_dataset("bigcode/humanevalpack", LANGUAGE, trust_remote_code=True)["test"]]
 
     chat_wrapper = ChatWrapper(MODEL)
     parse_errors = 0
