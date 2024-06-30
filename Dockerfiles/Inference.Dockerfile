@@ -2,17 +2,18 @@ FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
 
 SHELL ["/bin/bash", "-c"]
 
-# Setup Environment Variables
-ENV CUDA_HOME=/usr/local/cuda \
-    PYTHONUNBUFFERED=1 \
+ENV CUDA_HOME="/usr/local/cuda" \
     TORCH_CUDA_ARCH_LIST="7.0 7.5 8.0 8.6 8.9 9.0+PTX" \
-    GOPATH="/root/.go" \
-    GO111MODULE="off"
+    PYTHONUNBUFFERED=1 \
+    GOPATH="/container/go" \
+    GO111MODULE="off" \
+    CARGO_HOME="/container/cargo" \
+    RUSTUP_HOME="/container/rustup"
 
 # Setup System Utilities and Languages: C, C++, Java, Lua, Perl, R, Ruby, Scala and lang-specific dependencies like Boost (C++)
-RUN apt-get update --yes --quiet \
-    && apt-get upgrade --yes --quiet \
-    && DEBIAN_FRONTEND=noninteractive apt-get install --yes --quiet --no-install-recommends \
+RUN apt update --yes --quiet \
+    && apt upgrade --yes --quiet \
+    && DEBIAN_FRONTEND=noninteractive apt install --yes --quiet --no-install-recommends \
         apt-utils \
         autoconf \
         automake \
@@ -22,13 +23,11 @@ RUN apt-get update --yes --quiet \
         check \
         cmake \
         curl \
-        default-jdk-headless \
         dmidecode \
         emacs \
-        g++\
+        g++ \
         gcc \
         git \
-        golang-go \
         htop \
         iproute2 \
         jq \
@@ -52,12 +51,14 @@ RUN apt-get update --yes --quiet \
         libxext6 \
         libxrender-dev \
         lsof \
-        lua5.3 \
         lua-unit \
+        lua5.3 \
         make \
         moreutils \
         net-tools \
         ninja-build \
+        openjdk-21-jdk-headless \
+        openjdk-21-jre-headless \
         openssh-client \
         openssh-server \
         openssl \
@@ -69,39 +70,45 @@ RUN apt-get update --yes --quiet \
         scala \
         software-properties-common \
         sudo \
+        tmux \
         unzip \
         util-linux \
         vim \
         wget \
         zlib1g-dev \
-    && apt-get autoremove \
-    && apt-get clean \
+    && apt autoremove \
+    && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Setup Go testing dependencies
-RUN go get github.com/stretchr/testify/assert
+# Setup Go and its testing dependencies
+RUN add-apt-repository --yes ppa:longsleep/golang-backports \
+    && apt update --yes --quiet \
+    && DEBIAN_FRONTEND=noninteractive apt install --yes --quiet --no-install-recommends golang-1.18 \
+    && ln -s /usr/lib/go-1.18/bin/go /usr/bin/go \
+    && go get github.com/stretchr/testify/assert
 
 # Rust
 RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH=/root/.cargo/bin:$PATH
+ENV PATH=/container/cargo/bin:$PATH
 
 # JS/TS
-RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash -
-RUN apt-get install -y nodejs
-RUN npm install -g typescript
+RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - \
+    && apt install -y nodejs \
+    && npm install -g typescript
 
 # Dlang
-RUN wget https://netcologne.dl.sourceforge.net/project/d-apt/files/d-apt.list -O /etc/apt/sources.list.d/d-apt.list
-RUN apt-get update --allow-insecure-repositories
-RUN apt-get -y --allow-unauthenticated install --reinstall d-apt-keyring
-RUN apt-get update && apt-get install -yqq dmd-compiler dub
+RUN wget https://netcologne.dl.sourceforge.net/project/d-apt/files/d-apt.list -O /etc/apt/sources.list.d/d-apt.list \
+    && apt update --allow-insecure-repositories \
+    && apt -y --allow-unauthenticated install --reinstall d-apt-keyring \
+    && apt update \
+    && apt install -yqq dmd-compiler dub
 
 # C#
-RUN apt install gnupg ca-certificates
-RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
-RUN echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list
-RUN apt update
-RUN apt install -yqq mono-devel
+RUN apt install gnupg ca-certificates \
+    && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF \
+    && echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list \
+    && apt update -yqq \
+    && apt install -yqq mono-devel
 
 # Swift
 RUN curl https://download.swift.org/swift-5.7-release/ubuntu2204/swift-5.7-RELEASE/swift-5.7-RELEASE-ubuntu22.04.tar.gz | tar xz
@@ -112,12 +119,13 @@ RUN curl https://julialang-s3.julialang.org/bin/linux/x64/1.8/julia-1.8.2-linux-
 ENV PATH="/julia-1.8.2/bin:${PATH}"
 
 # JavaTuples
-RUN mkdir /usr/multiple && wget https://repo.mavenlibs.com/maven/org/javatuples/javatuples/1.2/javatuples-1.2.jar -O /usr/multiple/javatuples-1.2.jar
+RUN mkdir /container/multipl-e \
+    && wget https://repo.mavenlibs.com/maven/org/javatuples/javatuples/1.2/javatuples-1.2.jar -O /container/multipl-e/javatuples-1.2.jar
 
 # Setup base Python to bootstrap Mamba
 RUN add-apt-repository --yes ppa:deadsnakes/ppa \
-    && apt-get update --yes --quiet
-RUN DEBIAN_FRONTEND=noninteractive apt-get install --yes --quiet --no-install-recommends \
+    && apt update --yes --quiet \
+    && DEBIAN_FRONTEND=noninteractive apt install --yes --quiet --no-install-recommends \
         python3.10 \
         python3.10-dev \
         python3.10-distutils \
@@ -127,8 +135,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install --yes --quiet --no-install-re
         pip
 RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 999 \
     && update-alternatives --config python3 \
-    && ln -s /usr/bin/python3 /usr/bin/python
-RUN pip install --upgrade pip
+    && ln -s /usr/bin/python3 /usr/bin/python \
+    && pip install --upgrade pip
 
 # Setup Mamba environment
 RUN wget -O /tmp/Miniforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
@@ -178,8 +186,8 @@ RUN source /Miniforge/etc/profile.d/conda.sh \
         seqeval \
         'setuptools>=49.4.0' \
         termcolor \
-        'transformers>=4.36.1' \
-        'vllm==0.4.0' \
+        'transformers==4.41.2' \
+        'vllm==0.5.0' \
         wheel
 
 # Install Flash Attention

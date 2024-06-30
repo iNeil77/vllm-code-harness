@@ -80,7 +80,7 @@ class GeneralMultiPLE(Task):
     DATASET_NAME = None
     DATASET_REVISION = "d23b094346c5dbda1080a74bb2a24c18adbf7409"
 
-    def __init__(self, language, num_workers=32):
+    def __init__(self, language, num_workers=16):
         self.language = language
         self.workers = min(num_workers, os.cpu_count() - 1)
         self.DATASET_NAME = f"humaneval-{language}"
