@@ -111,12 +111,12 @@ RUN apt install gnupg ca-certificates \
     && apt install -yqq mono-devel
 
 # Swift
-RUN curl https://download.swift.org/swift-5.7-release/ubuntu2204/swift-5.7-RELEASE/swift-5.7-RELEASE-ubuntu22.04.tar.gz | tar xz
-ENV PATH="/swift-5.7-RELEASE-ubuntu22.04/usr/bin:${PATH}"
+RUN curl https://download.swift.org/swift-5.10.1-release/ubuntu2204/swift-5.10.1-RELEASE/swift-5.10.1-RELEASE-ubuntu22.04.tar.gz | tar xz -C /container/
+ENV PATH="/container/swift-5.10.1-RELEASE-ubuntu22.04/usr/bin:${PATH}"
 
 # Julia
-RUN curl https://julialang-s3.julialang.org/bin/linux/x64/1.8/julia-1.8.2-linux-x86_64.tar.gz | tar xz
-ENV PATH="/julia-1.8.2/bin:${PATH}"
+RUN curl https://julialang-s3.julialang.org/bin/linux/x64/1.10/julia-1.10.4-linux-x86_64.tar.gz | tar xz -C /container/
+ENV PATH="/container/julia-1.10.4/bin:${PATH}"
 
 # JavaTuples
 RUN mkdir /container/multipl-e \
