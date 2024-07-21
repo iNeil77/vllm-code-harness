@@ -87,10 +87,6 @@ RUN add-apt-repository --yes ppa:longsleep/golang-backports \
     && ln -s /usr/lib/go-1.18/bin/go /usr/bin/go \
     && go get github.com/stretchr/testify/assert
 
-# Rust
-RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
-ENV PATH=/container/cargo/bin:$PATH
-
 # JS/TS
 RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - \
     && apt install -y nodejs \
@@ -138,13 +134,13 @@ RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 9
     && ln -s /usr/bin/python3 /usr/bin/python \
     && pip install --upgrade pip
 
-# Setup Mamba environment
+# Setup Mamba environment and Rust
 RUN wget -O /tmp/Miniforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
     && bash /tmp/Miniforge.sh -b -p /Miniforge \
     && source /Miniforge/etc/profile.d/conda.sh \
     && source /Miniforge/etc/profile.d/mamba.sh \
     && mamba update -y -q -n base -c defaults mamba \
-    && mamba create -y -q -n inference python=3.11 setuptools=69.5.1 \
+    && mamba create -y -q -n inference python=3.11 setuptools=69.5.1 cxx-compiler=1.5.2 \
     && mamba activate inference \
     && mamba install -y -q -c conda-forge \
         charset-normalizer \
@@ -152,8 +148,9 @@ RUN wget -O /tmp/Miniforge.sh https://github.com/conda-forge/miniforge/releases/
         ipython \
         mkl \
         mkl-include \
-        numpy \
+        'numpy<2.0.0' \
         pandas \
+        rust=1.79.0 \
         scikit-learn \
         wandb \
     && mamba install -y -q -c pytorch magma-cuda121 \
