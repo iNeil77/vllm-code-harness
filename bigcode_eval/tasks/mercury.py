@@ -1,7 +1,8 @@
 """Mercury: An Efficiency Benchmark for LLM Code Synthesis
 https://arxiv.org/abs/2402.07844
 Mercury is the first benchmark to assess the code efficiency of LLM code generation tasks. 
-It consists of 1,889 programming tasks covering diverse difficulty levels alongside test case generators generating unlimited cases for comprehensive evaluation. 
+It consists of 1,889 programming tasks covering diverse difficulty levels alongside test 
+case generators generating unlimited cases for comprehensive evaluation. 
 Homepage: https://github.com/Elfsong/Mercury
 """
 import os
@@ -36,6 +37,8 @@ class Mercury(Task):
             requires_execution=True,
         )
         self.prompt = prompt
+        self.timeout = 12
+        self.n_workers = 12
 
     def get_dataset(self):
         """Returns dataset for the task or an iterable of any object, that get_prompt can handle"""
@@ -115,7 +118,10 @@ class Mercury(Task):
         :param references: list(str)
             list of str containing refrences
         """
-
-        results = compute_beyond_eval(generations, references)
-
+        results = compute_beyond_eval(
+            generations, 
+            references, 
+            self.timeout, 
+            self.n_workers
+        )
         return results

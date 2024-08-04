@@ -4,7 +4,7 @@
 # The sandbox is inspired by OpenAI's release
 # https://github.com/openai/human-eval/blob/master/human_eval/execution.py
 
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ProcessPoolExecutor
 from multiprocessing import Manager, Process
 from typing import Optional, Dict
 from tqdm import tqdm
@@ -298,19 +298,10 @@ class Sandbox(object):
             )
 
     @staticmethod
-    def run_samples(samples, n_workers=4):
-        with ThreadPoolExecutor(max_workers=n_workers) as executor:
-            futures, results = list(), list()
-
-            for sample in samples:
-                args = (sample,)
-                future = executor.submit(Sandbox.run_sample, *args)
-                futures.append(future)
-
-            for future in tqdm(as_completed(futures), total=len(futures), desc='Reading futures'):
-                result = future.result()
-                results.append(result)
-
+    def run_samples(samples, n_workers=12):
+        n_workers = min(n_workers, os.cpu_count() - 2, len(samples))
+        with ProcessPoolExecutor(max_workers=n_workers) as executor:
+            results = list(executor.map(Sandbox.run_sample, samples))
         return results
 
 
@@ -336,7 +327,7 @@ def estimate_beyond_at_k(beyonds, k):
     return sum([sum(b[:k]) / k for b in beyonds]) / len(beyonds)
 
 
-def compute_beyond_eval(generations_list, reference_list, timeout=10):
+def compute_beyond_eval(generations_list, reference_list, timeout=10, n_workers=12):
     sandbox = Sandbox()
 
     scores = {
@@ -355,7 +346,8 @@ def compute_beyond_eval(generations_list, reference_list, timeout=10):
     for generations, instance in tqdm(zip(generations_list, reference_list), total=len(generations_list), desc='compute_beyond_eval'):
         # Construct runtime distribution from sample solutions
         runtimes = list()
-        for index, solution in tqdm(enumerate(instance['solutions']), desc="Construct runtime distribution from sample solutions"):
+        reference_sample_list = list()
+        for index, solution in enumerate(instance['solutions']):
             sample = {
                 "solution": solution['solution'],
                 "convert_offline": instance['convert_offline'],
@@ -365,8 +357,11 @@ def compute_beyond_eval(generations_list, reference_list, timeout=10):
                 "solution_index": index,
                 "timeout": timeout
             }
-            result = sandbox.run_sample(sample)
+            for _ in range(5):
+                reference_sample_list.append(sample)
 
+        results = sandbox.run_samples(reference_sample_list, n_workers=n_workers)
+        for result in results:
             if result['result'] == "passed":
                 runtimes += [result['runtime']]
 
@@ -379,8 +374,9 @@ def compute_beyond_eval(generations_list, reference_list, timeout=10):
         t_c, p_c = 0, 0
         b_l = list()
         difficulty = instance['difficulty']
+        request_list = list()
 
-        for index, solution in tqdm(enumerate(generations), desc="generation execution", total=len(generations)):
+        for index, solution in enumerate(generations):
             sample = {
                 "solution": solution,
                 "convert_offline": instance['convert_offline'],
@@ -390,19 +386,24 @@ def compute_beyond_eval(generations_list, reference_list, timeout=10):
                 "solution_index": index,
                 "timeout": timeout,
             }
+            for _ in range(5):
+                request_list.append(sample) 
 
-            results = [sandbox.run_sample(sample) for _ in range(5)]
+        all_results = sandbox.run_samples(request_list, n_workers=n_workers)
+
+        for i in range(0, len(all_results), 5):
+            sample_results = all_results[i:i+5]
             t_c += 1
 
             # Calculate Beyond
-            if results[0]['result'] == "passed":
-                runtime = sum([r['runtime'] for r in results]) / len(results)
+            if sample_results[0]['result'] == "passed":
+                runtime = sum([r['runtime'] for r in sample_results]) / len(sample_results)
                 p_c += 1
             else:
                 runtime = float('inf')
 
             # Statistic Errors
-            errors[difficulty][results[0]['result']] += 1
+            errors[difficulty][sample_results[0]['result']] += 1
 
             runtime = min(runtime, max_runtime)
             runtime = max(runtime, min_runtime)
@@ -416,20 +417,24 @@ def compute_beyond_eval(generations_list, reference_list, timeout=10):
         scores['Average']['correct_c'] += [p_c]
         scores['Average']['beyond_c'] += [b_l]
 
-    results = dict()
+    score_results = dict()
     for difficulty in ['Easy', "Medium", "Hard", "Average"]:
         total = np.array(scores[difficulty]['total_c'])
         correct = np.array(scores[difficulty]['correct_c'])
         beyond = scores[difficulty]['beyond_c']
 
-        pass_at_k = {f"{difficulty}_pass@{k}": estimate_pass_at_k(total, correct, k).mean(
-        ) for k in [1, 10, 25, 100] if (total >= k).all()}
-        beyond_at_k = {f"{difficulty}_beyond@{k}": estimate_beyond_at_k(
-            beyond, k) for k in [1, 10, 25, 100] if (total >= k).all()}
+        pass_at_k = {
+            f"{difficulty}_pass@{k}": estimate_pass_at_k(total, correct, k).mean() 
+            for k in [1, 10, 25, 100] if (total >= k).all()
+        }
+        beyond_at_k = {
+            f"{difficulty}_beyond@{k}": estimate_beyond_at_k(beyond, k) 
+            for k in [1, 10, 25, 100] if (total >= k).all()
+        }
 
-        results.update(pass_at_k)
-        results.update(beyond_at_k)
+        score_results.update(pass_at_k)
+        score_results.update(beyond_at_k)
 
-    results.update(errors)
+    score_results.update(errors)
 
-    return results
+    return score_results
