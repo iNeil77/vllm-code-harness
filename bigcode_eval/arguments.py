@@ -6,6 +6,7 @@ from typing import Optional
 from bigcode_eval.tasks import ALL_TASKS
 import fnmatch
 
+
 def pattern_match(patterns, source_list):
     """Returns a list containing all values of the source_list that
     match at least one of the patterns"""
