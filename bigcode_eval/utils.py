@@ -258,8 +258,9 @@ def update_code_gens(
         updated_sample_gens = []
         for generation in sample_gens:
             if INFILL_MODE or tokenizer.eos_token in task.stop_words:
-                if generation.startswith(tokenizer.bos_token):
-                    generation = generation[len(tokenizer.bos_token):]
+                if tokenizer.bos_token:
+                    if generation.startswith(tokenizer.bos_token):
+                        generation = generation[len(tokenizer.bos_token):]
                 try:
                     # some tokenizers add a multi-token prefix to the generation (e.g ChatGLM)
                     tokenizer_prefix = tokenizer.decode(tokenizer.get_prefix_tokens())

@@ -129,6 +129,13 @@ class VLLMArguments:
             + "If None (default), all the prompts are sent to the LLM Engine together. Make sure to "
             + "modify the CPU swap_space as you modify this parameter or you may get OOM errors."}
     )
+    sequence_length_limit: Optional[int] = field(
+        default=None,
+        metadata={"help":"The longest length of the models forward graph to capture when running the VLLM.LLM Engine. "
+            + "Behind the scenes, this argument controls both, the max_seq_len_to_capture and the max_model_len "
+            + "parameters to the LLM class. Can be used to control the sequence length of a model whose default supported "
+            + "sequence length is very large such as Llama-3.1 or Qwen-2"}
+    )
 
 @dataclass
 class GenerationArguments:

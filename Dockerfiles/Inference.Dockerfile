@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+FROM nvidia/cuda:12.4.1-cudnn-devel-ubuntu22.04
 
 SHELL ["/bin/bash", "-c"]
 
@@ -14,10 +14,16 @@ ENV CUDA_HOME="/usr/local/cuda" \
 RUN apt update --yes --quiet \
     && apt upgrade --yes --quiet \
     && DEBIAN_FRONTEND=noninteractive apt install --yes --quiet --no-install-recommends \
+        apt-transport-https \
         apt-utils \
+        apache2 \
+        apache2-bin \
+        apache2-data \
+        apache2-utils \
         autoconf \
         automake \
         bc \
+        bison \
         build-essential \
         ca-certificates \
         check \
@@ -28,20 +34,26 @@ RUN apt update --yes --quiet \
         g++ \
         gcc \
         git \
+        gnupg \
         htop \
         iproute2 \
         jq \
         kmod \
         libaio-dev \
+        libapr1-dev \
         libboost-all-dev \
         libcurl4-openssl-dev \
+        libffi-dev \
+        libgdbm-dev \
         libgl1-mesa-glx \
         libglib2.0-0 \
         libgomp1 \
         libibverbs-dev \
+        libncurses5-dev \
         libnuma-dev \
         libnuma1 \
         libomp-dev \
+        libreadline-dev \
         libsm6 \
         libssl-dev \
         libsubunit-dev \
@@ -50,6 +62,8 @@ RUN apt update --yes --quiet \
         libtool \
         libxext6 \
         libxrender-dev \
+        libyaml-dev \
+        lsb-release \
         lsof \
         lua-unit \
         lua5.3 \
@@ -62,7 +76,6 @@ RUN apt update --yes --quiet \
         openssh-client \
         openssh-server \
         openssl \
-        php-cli \
         pkg-config \
         python3-dev \
         r-base \
@@ -80,6 +93,40 @@ RUN apt update --yes --quiet \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Setup Perl testing dependencies
+RUN perl -MCPAN -e 'install Test::Deep' \
+    && perl -MCPAN -e 'install Test::Differences' \
+    && perl -MCPAN -e 'install Data::Compare'
+
+# Setup R testing dependencies
+RUN R -e "install.packages('testthat', repos='http://cran.rstudio.com/')" \
+    && R -e "install.packages('devtools', repos='http://cran.rstudio.com/')"
+
+# Setup Php and its testing dependencies
+RUN add-apt-repository ppa:ondrej/php \
+    && apt update --yes --quiet \
+    && DEBIAN_FRONTEND=noninteractive apt install --yes --quiet --no-install-recommends php8.4 \
+    && DEBIAN_FRONTEND=noninteractive apt install --yes --quiet --no-install-recommends \
+        php8.4-bcmath \
+        php8.4-cgi \
+        php8.4-cli \
+        php8.4-common \
+        php8.4-curl \
+        php8.4-fpm \
+        php8.4-gd \
+        php8.4-gettext \
+        php8.4-intl \
+        php8.4-mbstring \
+        php8.4-mysql \
+        php8.4-mysqlnd \
+        php8.4-opcache \
+        php8.4-pdo \
+        php8.4-pgsql \
+        php8.4-readline \
+        php8.4-sqlite3 \
+        php8.4-xml \
+        php8.4-zip
+
 # Setup Go and its testing dependencies
 RUN add-apt-repository --yes ppa:longsleep/golang-backports \
     && apt update --yes --quiet \
@@ -87,34 +134,34 @@ RUN add-apt-repository --yes ppa:longsleep/golang-backports \
     && ln -s /usr/lib/go-1.18/bin/go /usr/bin/go \
     && go get github.com/stretchr/testify/assert
 
-# JS/TS
+# Setup JS/TS and auxiliary tools
 RUN curl -fsSL https://deb.nodesource.com/setup_current.x | bash - \
-    && apt install -y nodejs \
+    && DEBIAN_FRONTEND=noninteractive apt install -y nodejs \
+    && npm install -g lodash \
     && npm install -g typescript
 
-# Dlang
+# Setup Dlang
 RUN wget https://netcologne.dl.sourceforge.net/project/d-apt/files/d-apt.list -O /etc/apt/sources.list.d/d-apt.list \
     && apt update --allow-insecure-repositories \
     && apt -y --allow-unauthenticated install --reinstall d-apt-keyring \
     && apt update \
-    && apt install -yqq dmd-compiler dub
+    && DEBIAN_FRONTEND=noninteractive apt install -yqq dmd-compiler dub
 
-# C#
-RUN apt install gnupg ca-certificates \
-    && apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF \
+# Setup C# and dotnet runtime
+RUN apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF \
     && echo "deb https://download.mono-project.com/repo/ubuntu stable-focal main" | tee /etc/apt/sources.list.d/mono-official-stable.list \
     && apt update -yqq \
-    && apt install -yqq mono-devel
+    && DEBIAN_FRONTEND=noninteractive apt install -yqq mono-devel dotnet-sdk-8.0 dotnet-runtime-8.0
 
-# Swift
+# Setup Swift
 RUN curl https://download.swift.org/swift-5.10.1-release/ubuntu2204/swift-5.10.1-RELEASE/swift-5.10.1-RELEASE-ubuntu22.04.tar.gz | tar xz -C /container/
 ENV PATH="/container/swift-5.10.1-RELEASE-ubuntu22.04/usr/bin:${PATH}"
 
-# Julia
+# Setup Julia
 RUN curl https://julialang-s3.julialang.org/bin/linux/x64/1.10/julia-1.10.4-linux-x86_64.tar.gz | tar xz -C /container/
 ENV PATH="/container/julia-1.10.4/bin:${PATH}"
 
-# JavaTuples
+# Install Java testing dependencies
 RUN mkdir /container/multipl-e \
     && wget https://repo.mavenlibs.com/maven/org/javatuples/javatuples/1.2/javatuples-1.2.jar -O /container/multipl-e/javatuples-1.2.jar
 
@@ -122,25 +169,25 @@ RUN mkdir /container/multipl-e \
 RUN add-apt-repository --yes ppa:deadsnakes/ppa \
     && apt update --yes --quiet \
     && DEBIAN_FRONTEND=noninteractive apt install --yes --quiet --no-install-recommends \
-        python3.10 \
-        python3.10-dev \
-        python3.10-distutils \
-        python3.10-lib2to3 \
-        python3.10-gdbm \
-        python3.10-tk \
+        python3.11 \
+        python3.11-dev \
+        python3.11-distutils \
+        python3.11-lib2to3 \
+        python3.11-gdbm \
+        python3.11-tk \
         pip
-RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.10 999 \
+RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.11 999 \
     && update-alternatives --config python3 \
     && ln -s /usr/bin/python3 /usr/bin/python \
-    && pip install --upgrade pip
+    && python -m pip install --upgrade pip setuptools
 
 # Setup Mamba environment and Rust
-RUN wget -O /tmp/Miniforge.sh https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-Linux-x86_64.sh \
+RUN wget -O /tmp/Miniforge.sh https://github.com/conda-forge/miniforge/releases/download/24.3.0-0/Miniforge3-24.3.0-0-Linux-x86_64.sh \
     && bash /tmp/Miniforge.sh -b -p /Miniforge \
     && source /Miniforge/etc/profile.d/conda.sh \
     && source /Miniforge/etc/profile.d/mamba.sh \
     && mamba update -y -q -n base -c defaults mamba \
-    && mamba create -y -q -n inference python=3.11 setuptools=69.5.1 cxx-compiler=1.5.2 \
+    && mamba create -y -q -n inference python=3.12 setuptools=69.5.1 cxx-compiler=1.7.0 \
     && mamba activate inference \
     && mamba install -y -q -c conda-forge \
         charset-normalizer \
@@ -150,10 +197,10 @@ RUN wget -O /tmp/Miniforge.sh https://github.com/conda-forge/miniforge/releases/
         mkl-include \
         'numpy<2.0.0' \
         pandas \
-        rust=1.79.0 \
+        rust=1.80.1 \
         scikit-learn \
         wandb \
-    && mamba install -y -q -c pytorch magma-cuda121 \
+    && mamba install -y -q -c pytorch magma-cuda124 \
     && mamba clean -a -f -y
 
 # Install vllm and eval-harness dependencies
@@ -168,12 +215,15 @@ RUN source /Miniforge/etc/profile.d/conda.sh \
         'evaluate>=0.3.0' \
         'fsspec<2023.10.0' \
         'huggingface_hub>=0.11.1' \
+        hf_transfer \
         jsonlines \
+        maturin \
         'mosestokenizer==1.0.0' \
         ninja \
         nltk \
         openai \
         packaging \
+        patchelf \
         peft \
         protobuf \
         py7zr \
@@ -183,8 +233,8 @@ RUN source /Miniforge/etc/profile.d/conda.sh \
         seqeval \
         'setuptools>=49.4.0' \
         termcolor \
-        'transformers==4.41.2' \
-        'vllm==0.5.0' \
+        'transformers==4.44.1' \
+        'vllm==0.5.4' \
         wheel
 
 # Install Flash Attention
@@ -193,4 +243,5 @@ RUN source /Miniforge/etc/profile.d/conda.sh \
     && mamba activate inference \
     && export MAX_JOBS=$(($(nproc) - 2)) \
     && pip install --no-cache-dir ninja packaging \
-    && pip install flash-attn==2.5.8 --no-build-isolation
+    && pip install flash-attn==2.6.3 --no-build-isolation
+

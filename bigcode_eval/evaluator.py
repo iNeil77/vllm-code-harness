@@ -90,13 +90,13 @@ class Evaluator:
     ) -> None:
         if self.args.save_generations:
             print(f"saving generations at {save_generations_path}")
-            os.makedirs(os.path.dirname(save_generations_path), mode=744, exist_ok=True)
+            os.makedirs(os.path.dirname(save_generations_path), mode=755, exist_ok=True)
             with open(save_generations_path, "w+") as fp:
                 json.dump(generations, fp)
                 print(f"generations were saved at {save_generations_path}")
         if self.args.save_references:
             print(f"saving references at {save_references_path}")
-            os.makedirs(os.path.dirname(save_references_path), mode=744, exist_ok=True)
+            os.makedirs(os.path.dirname(save_references_path), mode=755, exist_ok=True)
             with open(save_references_path, "w+") as fp:
                 json.dump(references, fp)
                 print(f"references were saved at {save_references_path}")

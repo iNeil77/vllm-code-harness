@@ -91,6 +91,8 @@ def main():
             trust_remote_code=args.trust_remote_code,
             gpu_memory_utilization=args.gpu_memory_utilization,
             swap_space=args.swap_space,
+            max_seq_len_to_capture=args.sequence_length_limit,
+            max_model_len=args.sequence_length_limit,
         )
         model.set_tokenizer(tokenizer=tokenizer)
 
@@ -112,7 +114,7 @@ def main():
     if not args.generation_only:
         dumped = json.dumps(results, indent=2)
         print(dumped)
-        os.makedirs(os.path.dirname(args.metric_output_path), mode=744, exist_ok=True)
+        os.makedirs(os.path.dirname(args.metric_output_path), mode=755, exist_ok=True)
         with open(args.metric_output_path, "w+") as f:
             f.write(dumped)
 
