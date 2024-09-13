@@ -261,6 +261,12 @@ def update_code_gens(
                 if tokenizer.bos_token:
                     if generation.startswith(tokenizer.bos_token):
                         generation = generation[len(tokenizer.bos_token):]
+                if tokenizer.eos_token:
+                    if generation.startswith(tokenizer.eos_token):
+                        generation = generation[len(tokenizer.eos_token):]
+                if tokenizer.pad_token:
+                    if generation.startswith(tokenizer.pad_token):
+                        generation = generation[len(tokenizer.pad_token):]
                 try:
                     # some tokenizers add a multi-token prefix to the generation (e.g ChatGLM)
                     tokenizer_prefix = tokenizer.decode(tokenizer.get_prefix_tokens())
