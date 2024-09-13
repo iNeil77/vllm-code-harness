@@ -1,6 +1,6 @@
 # VLLM Code Harness
 
-This package is a [vllm](https://github.com/vllm-project/vllm) enabled derivative of the popular [bigcode-evaluation-harness](https://github.com/bigcode-project/bigcode-evaluation-harness). It offers feature parity with the parent project as of 17th February 2024.
+This package is a [vllm](https://github.com/vllm-project/vllm) enabled derivative of the popular [bigcode-evaluation-harness](https://github.com/bigcode-project/bigcode-evaluation-harness). It offers feature parity with the parent project as of 13th September 2024.
 
 By our experiments, evaluations using this harness can be upto 12x faster than the original harness. We also release a Dockerfile which contains all the generation dependencies and evaluation toolchains pre-installed. This can be used to run the evaluation harness in a reproducible manner.
 
