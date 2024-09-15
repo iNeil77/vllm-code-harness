@@ -8,15 +8,15 @@ from transformers import (
     HfArgumentParser,
 )
 from vllm import LLM
-from bigcode_eval.arguments import (
+from eval_harness.arguments import (
     GenerationArguments,
     ModelArguments,
     VLLMArguments,
     WorkflowArguments,
     pattern_match
 )
-from bigcode_eval.evaluator import Evaluator
-from bigcode_eval.tasks import ALL_TASKS
+from eval_harness.evaluator import Evaluator
+from eval_harness.tasks import ALL_TASKS
 
 
 def main():

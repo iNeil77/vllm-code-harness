@@ -10,8 +10,8 @@ has been hand-verified by the authors.
 Homepage:: https://github.com/google-research/google-research/tree/master/mbpp
 """
 
-from bigcode_eval.base import Task
-from bigcode_eval.tasks.custom_metrics.code_eval import compute_code_eval
+from eval_harness.base import Task
+from eval_harness.tasks.custom_metrics.code_eval import compute_code_eval
 
 _CITATION = """
 @article{austin2021program,

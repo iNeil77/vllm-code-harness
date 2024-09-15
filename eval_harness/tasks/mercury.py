@@ -8,8 +8,8 @@ Homepage: https://github.com/Elfsong/Mercury
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
-from bigcode_eval.base import Task
-from bigcode_eval.tasks.custom_metrics.beyond_eval import compute_beyond_eval
+from eval_harness.base import Task
+from eval_harness.tasks.custom_metrics.beyond_eval import compute_beyond_eval
 
 _CITATION = """
 @article{du2024mercury,

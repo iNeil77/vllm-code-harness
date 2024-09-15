@@ -7,7 +7,7 @@ It is uploaded here: https://huggingface.co/datasets/Muennighoff/python-bugs
 Make sure to run with sufficient context length (512 is not enough for e.g. CodeGen).
 """
 
-from bigcode_eval.base import Task
+from eval_harness.base import Task
 import tqdm
 
 _CITATION = """

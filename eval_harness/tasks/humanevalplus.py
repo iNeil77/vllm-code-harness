@@ -9,7 +9,7 @@ Homepage: https://github.com/evalplus/evalplus
 
 from warnings import warn
 
-from bigcode_eval.tasks.humaneval import GeneralHumanEval
+from eval_harness.tasks.humaneval import GeneralHumanEval
 
 _CITATION = """
 @inproceedings{evalplus,

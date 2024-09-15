@@ -1,11 +1,12 @@
-"""MultiPL-E: A Scalable and Extensible Approach to Benchmarking Neural Code Generation
-https://arxiv.org/abs/2107.03374
+"""HumanEval-XL: A Multilingual Code Generation Benchmark for Cross-lingual Natural Language Generalization
+https://aclanthology.org/2024.lrec-main.735/
 
-MultiPL-E is a dataset for evaluating large language models for code generation that supports 18 programming languages.
-It takes the OpenAI "HumanEval" Python benchmark and uses little transpilers to translate them to other languages.
+The HumanEval-XL dataset offers a comprehensive evaluation platform for multilingual LLMs, allowing the 
+assessment of the understanding of different NLs.
 
-Homepage: https://nuprl.github.io/MultiPL-E/
+Homepage: https://github.com/FloatAI/HumanEval-XL
 """
+
 
 import json
 import os
@@ -16,44 +17,88 @@ import numpy as np
 from datasets import load_dataset
 from tqdm import tqdm
 
-from bigcode_eval.base import Task
-from bigcode_eval.tasks.custom_metrics.multiple_metrics.evaluation import evaluate_problem
-from bigcode_eval.tasks.custom_metrics.multiple_metrics.single_experiment_pass_k import for_file
+from eval_harness.base import Task
+from eval_harness.tasks.custom_metrics.multiple_metrics.evaluation import evaluate_problem
+from eval_harness.tasks.custom_metrics.multiple_metrics.single_experiment_pass_k import for_file
 
 
 _CITATION = """
-@article{cassano2022scalable,
-  title={A Scalable and Extensible Approach to Benchmarking NL2Code for 18 Programming Languages},
-  author={Cassano, Federico and Gouwar, John and Nguyen, Daniel and Nguyen, Sydney and Phipps-Costin, Luna and Pinckney, Donald and Yee, Ming Ho and Zi, Yangtian and Anderson, Carolyn Jane and Feldman, Molly Q and others},
-  journal={arXiv preprint arXiv:2208.08227},
-  year={2022}
+@inproceedings{peng-etal-2024-humaneval,
+    title = "{H}uman{E}val-{XL}: A Multilingual Code Generation Benchmark for Cross-lingual Natural 
+        Language Generalization",
+    author = "Peng, Qiwei  and
+        Chai, Yekun  and
+        Li, Xuhong",
+    editor = "Calzolari, Nicoletta  and
+        Kan, Min-Yen  and
+        Hoste, Veronique  and
+        Lenci, Alessandro  and
+        Sakti, Sakriani  and
+        Xue, Nianwen",
+    booktitle = "Proceedings of the 2024 Joint International Conference on Computational Linguistics, 
+        Language Resources and Evaluation (LREC-COLING 2024)",
+    month = may,
+    year = "2024",
+    address = "Torino, Italia",
+    publisher = "ELRA and ICCL",
+    url = "https://aclanthology.org/2024.lrec-main.735",
+    pages = "8383--8394",
 }
 """
 
+NL_LIST = [
+    'afrikaans',
+    'arabic', 
+    'bulgarian', 
+    'chinese', 
+    'dutch', 
+    'english', 
+    'estonian', 
+    'finnish', 
+    'french', 
+    'german', 
+    'greek', 
+    'hebrew', 
+    'hungarian', 
+    'indonesian', 
+    'italian', 
+    'malay', 
+    'persian', 
+    'portuguese', 
+    'russian', 
+    'spanish', 
+    'tagalog', 
+    'turkish', 
+    'vietnamese', 
+]
 
-LANGUAGES = [
-    'clj',
-    'cpp',
-    'cs',
-    'd',
-    'go',
-    'hs',
-    'java',
-    'jl',
-    'js',
-    'lua',
-    'ml',
-    'php',
-    'pl',
-    'py',
-    'r',
-    'rb',
-    'rs',
-    'scala',
-    'sh',
-    'swift',
-    'ts'
- ]
+PL_LIST = [
+    "csharp", 
+    "go", 
+    "java", 
+    "javascript", 
+    "perl", 
+    "php", 
+    "python", 
+    "ruby", 
+    "scala", 
+    "swift", 
+    "typescript"
+]
+
+EXT_MAP = {
+    "csharp": "cs",
+    "go": "go",
+    "java": "java",
+    "javascript": "js",
+    "perl": "pl",
+    "php": "php",
+    "python": "py",
+    "ruby": "rb",
+    "scala": "scala",
+    "swift": "swift",
+    "typescript": "ts",
+}
 
 
 def create_all_tasks():
@@ -61,40 +106,45 @@ def create_all_tasks():
     :return: {task_name: task}
         e.g. {multiple-py: Task, multiple-java: Task}
     """
-    return {f"multiple-{language}": create_task(language) for language in LANGUAGES}
+    return {
+        f"humaneval-xl-{programming_language}-{natural_language}": create_task(natural_language, programming_language) 
+        for natural_language in NL_LIST for programming_language in PL_LIST
+    }
 
 
-def create_task(language):
-    class MultiPLE(GeneralMultiPLE):
+def create_task(nl, pl):
+    class HumanEvalXL(GeneralHumanEvalXL):
         def __init__(self):
-            super().__init__(language)
+            super().__init__(nl, pl)
 
-    return MultiPLE
+    return HumanEvalXL
 
 
-class GeneralMultiPLE(Task):
+class GeneralHumanEvalXL(Task):
     """A task represents an entire benchmark including its dataset, problems,
     answers, generation settings and evaluation methods.
     """
 
-    DATASET_PATH = "iNeil77/MultiPL-E"
+    DATASET_PATH = "iNeil77/HumanEval-XL"
     DATASET_NAME = None
-    DATASET_REVISION = "f9fdbc55da90b963a9d53769179b777bbe0235b5"
+    DATASET_REVISION = "d2b8e0089411c7970e26b681ef0f2797b8e9ec28"
 
-    def __init__(self, language, num_workers=16):
-        self.language = language
+    def __init__(self, natural_language, programming_language, num_workers=16):
+        self.natural_language = natural_language
+        self.programming_language = programming_language
         self.workers = min(num_workers, os.cpu_count() - 1)
-        self.DATASET_NAME = language
+        self.DATASET_NAME = programming_language
         # we need the dataset to get stop words for each language
         self.dataset = load_dataset(
-            GeneralMultiPLE.DATASET_PATH,
+            GeneralHumanEvalXL.DATASET_PATH,
             self.DATASET_NAME,
             revision=self.DATASET_REVISION,
             trust_remote_code=True,
-            split="test",
+            split=natural_language,
         )
         self.stop_words = self.dataset[0]["stop_tokens"] + ["<file_sep>"]
-        self.requires_execution = True
+        self.requires_execution=True,
+
 
     def get_dataset(self):
         """Returns dataset for the task or an iterable of any object, that get_prompt can handle"""
@@ -130,7 +180,7 @@ class GeneralMultiPLE(Task):
         """
         # get prompts and problem names
         prompts_names = [
-            {"prompt": doc["prompt"], "name": doc["name"]}
+            {"prompt": doc["prompt"], "task_id": doc["task_id"]}
             for i, doc in enumerate(self.get_dataset())
             if i < len(generations)
         ]
@@ -141,14 +191,14 @@ class GeneralMultiPLE(Task):
             prompts_names, generations, references
         ):
             problem = {
-                "name": prompt_name["name"],
-                "language": self.language,
+                "task_id": prompt_name["task_id"],
+                "language": EXT_MAP[self.language],
                 "prompt": prompt_name["prompt"],
                 "completions": generation,
                 "tests": reference,
             }
             # each problem is save in a json file
-            temp_file_name = os.path.join(temp_dir, f"{prompt_name['name']}.json")
+            temp_file_name = os.path.join(temp_dir, f"{prompt_name['task_id']}.json")
             list_files.append(temp_file_name)
             with open(temp_file_name, "wt") as f:
                 json.dump(problem, f)

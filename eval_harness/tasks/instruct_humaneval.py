@@ -8,9 +8,9 @@ They were handwritten to ensure not to be included in the training set of code g
 Homepage: https://github.com/openai/human-eval
 """
 
-from bigcode_eval.base import Task
-from bigcode_eval.utils import remove_after_return
-from bigcode_eval.tasks.custom_metrics.code_eval import compute_code_eval
+from eval_harness.base import Task
+from eval_harness.utils import remove_after_return
+from eval_harness.tasks.custom_metrics.code_eval import compute_code_eval
 
 _CITATION = ""
 

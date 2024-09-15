@@ -8,7 +8,7 @@ from concurrent.futures import (
     ThreadPoolExecutor, 
     as_completed
 )
-from bigcode_eval.tasks.custom_metrics.pal_metric.python_executor import run_program
+from eval_harness.tasks.custom_metrics.pal_metric.python_executor import run_program
 
 # adapted from https://github.com/huggingface/evaluate/blob/main/metrics/code_eval/code_eval.py
 

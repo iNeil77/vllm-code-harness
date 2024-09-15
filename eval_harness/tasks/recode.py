@@ -6,8 +6,8 @@ Recode is a benchmark evaluating the robustness of code generation models to cod
 This task allows to run the released perturbed HumanEval benchmark, and compute the robust-pass-at-k metric.
 """
 from collections import defaultdict
-from bigcode_eval.base import Task
-from bigcode_eval.tasks.custom_metrics.code_eval import compute_code_eval
+from eval_harness.base import Task
+from eval_harness.tasks.custom_metrics.code_eval import compute_code_eval
 
 import numpy as np
 

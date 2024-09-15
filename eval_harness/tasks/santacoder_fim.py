@@ -2,7 +2,7 @@ from typing import Dict, List
 
 from tqdm import tqdm
 
-from bigcode_eval.base import Task
+from eval_harness.base import Task
 
 _CITATION = """
 @article{allal2023santacoder,

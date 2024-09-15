@@ -8,7 +8,7 @@ Text to text task from CodeXGlue (documentation translation)
 import json
 from evaluate import load
 
-from bigcode_eval.base import Task
+from eval_harness.base import Task
 
 _CITATION = """
 @article{CodeXGLUE,

@@ -14,8 +14,8 @@ import json
 from enum import Enum
 from typing import Union
 
-from bigcode_eval.base import Task
-from bigcode_eval.tasks.custom_metrics.pal_metric.pal_code_exec import compute
+from eval_harness.base import Task
+from eval_harness.tasks.custom_metrics.pal_metric.pal_code_exec import compute
 
 _CITATION = """
 @article{gao2022pal,

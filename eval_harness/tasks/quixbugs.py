@@ -2,8 +2,8 @@
 
 import re
 
-from bigcode_eval.base import Task
-from bigcode_eval.tasks.custom_metrics.code_eval import compute_code_eval
+from eval_harness.base import Task
+from eval_harness.tasks.custom_metrics.code_eval import compute_code_eval
 
 _CITATION = """
 @inproceedings{lin2017quixbugs,

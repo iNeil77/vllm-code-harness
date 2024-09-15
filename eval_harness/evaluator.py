@@ -3,8 +3,8 @@ import os
 import warnings
 
 from typing import List
-from bigcode_eval import tasks
-from bigcode_eval.generation import get_generations
+from eval_harness import tasks
+from eval_harness.generation import get_generations
 
 _WARNING = """
 ################################################################################

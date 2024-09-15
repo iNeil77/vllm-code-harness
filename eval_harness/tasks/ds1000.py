@@ -19,7 +19,7 @@ import zipfile
 import requests
 import tqdm
 
-from bigcode_eval.base import Task
+from eval_harness.base import Task
 
 _CITATION = """
 @article{Lai2022DS1000,

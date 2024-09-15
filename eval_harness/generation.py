@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import random
 
-from bigcode_eval.utils import (
+from eval_harness.utils import (
     PrompBatcher, 
     complete_code
 )

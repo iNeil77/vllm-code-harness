@@ -3,7 +3,7 @@ from dataclasses import (
     field
 )
 from typing import Optional
-from bigcode_eval.tasks import ALL_TASKS
+from eval_harness.tasks import ALL_TASKS
 import fnmatch
 
 
