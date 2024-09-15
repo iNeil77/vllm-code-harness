@@ -5,8 +5,14 @@
 # https://github.com/openai/human-eval/blob/master/human_eval/execution.py
 
 from concurrent.futures import ProcessPoolExecutor
-from multiprocessing import Manager, Process
-from typing import Optional, Dict
+from multiprocessing import (
+    Manager, 
+    Process
+)
+from typing import (
+    Optional, 
+    Dict
+)
 from tqdm import tqdm
 import numpy as np
 import faulthandler

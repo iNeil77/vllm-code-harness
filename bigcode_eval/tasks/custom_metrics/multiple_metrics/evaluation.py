@@ -49,26 +49,19 @@ def cached_eval_script(problem, index) -> dict:
 
 
 def get_test_results_json_path(
-    output_dir: str, problem_json_path: str, input_dir: Path
+    output_dir: str, problem_json_path: str
 ) -> Path:
     suffixes = ".results.json"
     problem_name = problem_json_path[: -len(".json")]
-    if input_dir:
-        raise ValueError("input dir given")
-        return Path(output_dir) / (
-            problem_json_path.relative_to(input_dir).parent / (problem_name + suffixes)
-        )
     return Path(output_dir) / (problem_name + suffixes)
 
 
 def evaluate_problem(
-    output_dir: str, problem_json_path: str, max_workers: int, input_dir: Path = None
+    output_dir: str, problem_json_path: str, max_workers: int
 ):
     with open(problem_json_path, "r") as f:
         problem = json.load(f)
-    test_results_path = get_test_results_json_path(
-        output_dir, problem_json_path, input_dir
-    )
+    test_results_path = get_test_results_json_path(output_dir, problem_json_path)
     test_results_path.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
 
     test_results = problem.copy()

@@ -2,14 +2,13 @@
 https://arxiv.org/abs/2107.03374
 
 MultiPL-E is a dataset for evaluating large language models for code generation that supports 18 programming languages.
-It takes the OpenAI "HumanEval" and the MBPP Python benchmarks and uses little compilers to translate them to other languages.
+It takes the OpenAI "HumanEval" Python benchmark and uses little transpilers to translate them to other languages.
 
 Homepage: https://nuprl.github.io/MultiPL-E/
 """
 
 import json
 import os
-import re
 import tempfile
 from pathlib import Path
 
@@ -18,10 +17,9 @@ from datasets import load_dataset
 from tqdm import tqdm
 
 from bigcode_eval.base import Task
-from bigcode_eval.tasks.custom_metrics.multiple_metrics.evaluation import \
-    evaluate_problem
-from bigcode_eval.tasks.custom_metrics.multiple_metrics.single_experiment_pass_k import \
-    for_file
+from bigcode_eval.tasks.custom_metrics.multiple_metrics.evaluation import evaluate_problem
+from bigcode_eval.tasks.custom_metrics.multiple_metrics.single_experiment_pass_k import for_file
+
 
 _CITATION = """
 @article{cassano2022scalable,
@@ -32,27 +30,30 @@ _CITATION = """
 }
 """
 
+
 LANGUAGES = [
-    "py",
-    "sh",
-    "cpp",
-    "cs",
-    "d",
-    "go",
-    "java",
-    "js",
-    "jl",
-    "lua",
-    "pl",
-    "php",
-    "r",
-    "rkt",
-    "rb",
-    "rs",
-    "scala",
-    "swift",
-    "ts",
-]
+    'clj',
+    'cpp',
+    'cs',
+    'd',
+    'go',
+    'hs',
+    'java',
+    'jl',
+    'js',
+    'lua',
+    'ml',
+    'php',
+    'pl',
+    'py',
+    'r',
+    'rb',
+    'rs',
+    'scala',
+    'sh',
+    'swift',
+    'ts'
+ ]
 
 
 def create_all_tasks():
@@ -76,22 +77,23 @@ class GeneralMultiPLE(Task):
     answers, generation settings and evaluation methods.
     """
 
-    DATASET_PATH = "nuprl/MultiPL-E"
+    DATASET_PATH = "iNeil77/MultiPL-E"
     DATASET_NAME = None
-    DATASET_REVISION = "d23b094346c5dbda1080a74bb2a24c18adbf7409"
+    DATASET_REVISION = "f9fdbc55da90b963a9d53769179b777bbe0235b5"
 
     def __init__(self, language, num_workers=16):
         self.language = language
         self.workers = min(num_workers, os.cpu_count() - 1)
-        self.DATASET_NAME = f"humaneval-{language}"
+        self.DATASET_NAME = language
         # we need the dataset to get stop words for each language
         self.dataset = load_dataset(
             GeneralMultiPLE.DATASET_PATH,
             self.DATASET_NAME,
             revision=self.DATASET_REVISION,
             trust_remote_code=True,
+            split="test",
         )
-        stop_words = self.dataset["test"][0]["stop_tokens"] + ["<file_sep>"]
+        stop_words = self.dataset[0]["stop_tokens"] + ["<file_sep>"]
         super().__init__(
             stop_words=stop_words,
             requires_execution=True,
@@ -99,7 +101,7 @@ class GeneralMultiPLE(Task):
 
     def get_dataset(self):
         """Returns dataset for the task or an iterable of any object, that get_prompt can handle"""
-        return self.dataset["test"]
+        return self.dataset
 
     def get_prompt(self, doc):
         """Builds the prompt for the LM to generate from."""
@@ -108,14 +110,6 @@ class GeneralMultiPLE(Task):
     def get_reference(self, doc):
         """Builds the reference solution for the doc (sample from the test dataset)."""
         return doc["tests"]
-
-    @staticmethod
-    def remove_last_block(string, stop_words):
-        # Remove the last block of the code containing stop_words for HumanEval
-        string_list = re.split("(%s)" % "|".join(stop_words), string)
-        # last string should be ""
-        return "".join(string_list[:-2])
-
 
     def postprocess_generation(self, generation, idx):
         """Defines the postprocessing for a LM generation.
@@ -174,11 +168,6 @@ class GeneralMultiPLE(Task):
             [for_file(p) for p in Path(temp_dir).glob("*.results.json")]
         )
         result = result_array.mean(axis=0)
-        name = (
-            temp_dir.split("/")[-1]
-            if temp_dir.split("/")[-1] != ""
-            else temp_dir.split("/")[-2]
-        )
         results = {
             f"pass@{k}": v
             for k, v in zip([1, 10, 25, 100], result)

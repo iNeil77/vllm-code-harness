@@ -10,16 +10,16 @@ ENV CUDA_HOME="/usr/local/cuda" \
     CARGO_HOME="/container/cargo" \
     RUSTUP_HOME="/container/rustup"
 
-# Setup System Utilities and Languages: C, C++, Java, Lua, Perl, R, Ruby, Scala and lang-specific dependencies like Boost (C++)
+# Setup System Utilities and Languages: C, C++, Haskell, Java, Lua, OCaml, Perl, R, Ruby, Scala and lang-specific dependencies like Boost (C++)
 RUN apt update --yes --quiet \
     && apt upgrade --yes --quiet \
     && DEBIAN_FRONTEND=noninteractive apt install --yes --quiet --no-install-recommends \
-        apt-transport-https \
-        apt-utils \
         apache2 \
         apache2-bin \
         apache2-data \
         apache2-utils \
+        apt-transport-https \
+        apt-utils \
         autoconf \
         automake \
         bc \
@@ -33,10 +33,12 @@ RUN apt update --yes --quiet \
         emacs \
         g++ \
         gcc \
+        ghc \
         git \
         gnupg \
         htop \
         iproute2 \
+        iotop \
         jq \
         kmod \
         libaio-dev \
@@ -71,6 +73,8 @@ RUN apt update --yes --quiet \
         moreutils \
         net-tools \
         ninja-build \
+        ocaml \
+        ocaml-interp \
         openjdk-21-jdk-headless \
         openjdk-21-jre-headless \
         openssh-client \
@@ -79,6 +83,8 @@ RUN apt update --yes --quiet \
         pkg-config \
         python3-dev \
         r-base \
+        racket \
+        rlwrap \
         ruby \
         scala \
         software-properties-common \
@@ -126,6 +132,18 @@ RUN add-apt-repository ppa:ondrej/php \
         php8.4-sqlite3 \
         php8.4-xml \
         php8.4-zip
+
+# Clojure
+RUN curl -L -O https://github.com/clojure/brew-install/releases/latest/download/linux-install.sh
+RUN chmod +x linux-install.sh
+RUN ./linux-install.sh --prefix /clojure
+ENV PATH="/clojure/bin:${PATH}"
+RUN clojure -P
+
+# Dart
+RUN wget -qO- https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg  --dearmor -o /usr/share/keyrings/dart.gpg
+RUN echo 'deb [signed-by=/usr/share/keyrings/dart.gpg arch=amd64] https://storage.googleapis.com/download.dartlang.org/linux/debian stable main' | tee /etc/apt/sources.list.d/dart_stable.list
+RUN apt-get update -yqq && apt-get install -yqq dart
 
 # Setup Go and its testing dependencies
 RUN add-apt-repository --yes ppa:longsleep/golang-backports \
@@ -200,7 +218,7 @@ RUN wget -O /tmp/Miniforge.sh https://github.com/conda-forge/miniforge/releases/
         rust=1.80.1 \
         scikit-learn \
         wandb \
-    && mamba install -y -q -c pytorch magma-cuda124 \
+    && mamba install -y -q -c pytorch -c nvidia magma-cuda124 pytorch==2.4.0 pytorch-cuda=12.4 \
     && mamba clean -a -f -y
 
 # Install vllm and eval-harness dependencies
@@ -210,7 +228,7 @@ RUN source /Miniforge/etc/profile.d/conda.sh \
     && pip install 'accelerate>=0.13.2' \
         camel_converter \
         cdifflib \
-        'datasets>=2.6.1' \
+        'datasets>=2.6.1,<3.0.0' \
         diff_match_patch \
         'evaluate>=0.3.0' \
         'fsspec<2023.10.0' \
@@ -234,7 +252,7 @@ RUN source /Miniforge/etc/profile.d/conda.sh \
         'setuptools>=49.4.0' \
         termcolor \
         'transformers==4.44.1' \
-        'vllm==0.5.4' \
+        'vllm==0.6.1.post2' \
         wheel
 
 # Install Flash Attention
@@ -244,4 +262,3 @@ RUN source /Miniforge/etc/profile.d/conda.sh \
     && export MAX_JOBS=$(($(nproc) - 2)) \
     && pip install --no-cache-dir ninja packaging \
     && pip install flash-attn==2.6.3 --no-build-isolation
-
