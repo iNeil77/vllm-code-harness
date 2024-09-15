@@ -90,10 +90,10 @@ def create_all_tasks():
     }
 
 
-def create_task(nl, pl):
+def create_task(pl):
     class MXEval(GeneralMXEval):
         def __init__(self):
-            super().__init__(nl, pl)
+            super().__init__(pl)
 
     return MXEval
 
