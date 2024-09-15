@@ -1,10 +1,9 @@
-"""HumanEval-XL: A Multilingual Code Generation Benchmark for Cross-lingual Natural Language Generalization
-https://aclanthology.org/2024.lrec-main.735/
+"""Multi-lingual Evaluation of Code Generation Models
+https://openreview.net/forum?id=Bo7eeXm6An8
 
-The HumanEval-XL dataset offers a comprehensive evaluation platform for multilingual LLMs, allowing the 
-assessment of the understanding of different NLs.
+The MXEval dataset code to perform execution-based multi-lingual evaluation of code generation capabilities.
 
-Homepage: https://github.com/FloatAI/HumanEval-XL
+Homepage: https://github.com/amazon-science/mxeval
 """
 
 
@@ -23,54 +22,33 @@ from eval_harness.tasks.custom_metrics.multiple_metrics.single_experiment_pass_k
 
 
 _CITATION = """
-@inproceedings{peng-etal-2024-humaneval,
-    title = "{H}uman{E}val-{XL}: A Multilingual Code Generation Benchmark for Cross-lingual Natural 
-        Language Generalization",
-    author = "Peng, Qiwei  and
-        Chai, Yekun  and
-        Li, Xuhong",
-    editor = "Calzolari, Nicoletta  and
-        Kan, Min-Yen  and
-        Hoste, Veronique  and
-        Lenci, Alessandro  and
-        Sakti, Sakriani  and
-        Xue, Nianwen",
-    booktitle = "Proceedings of the 2024 Joint International Conference on Computational Linguistics, 
-        Language Resources and Evaluation (LREC-COLING 2024)",
-    month = may,
-    year = "2024",
-    address = "Torino, Italia",
-    publisher = "ELRA and ICCL",
-    url = "https://aclanthology.org/2024.lrec-main.735",
-    pages = "8383--8394",
+@inproceedings{DBLP:conf/iclr/AthiwaratkunGWL23,
+  author       = {Ben Athiwaratkun and
+                  Sanjay Krishna Gouda and
+                  Zijian Wang and
+                  Xiaopeng Li and
+                  Yuchen Tian and
+                  Ming Tan and
+                  Wasi Uddin Ahmad and
+                  Shiqi Wang and
+                  Qing Sun and
+                  Mingyue Shang and
+                  Sujan Kumar Gonugondla and
+                  Hantian Ding and
+                  Varun Kumar and
+                  Nathan Fulton and
+                  Arash Farahani and
+                  Siddhartha Jain and
+                  Robert Giaquinto and
+                  Haifeng Qian and
+                  Murali Krishna Ramanathan and
+                  Ramesh Nallapati},
+  title        = {Multi-lingual Evaluation of Code Generation Models},
+  booktitle    = {{ICLR}},
+  publisher    = {OpenReview.net},
+  year         = {2023}
 }
 """
-
-NL_LIST = [
-    'afrikaans',
-    'arabic', 
-    'bulgarian', 
-    'chinese', 
-    'dutch', 
-    'english', 
-    'estonian', 
-    'finnish', 
-    'french', 
-    'german', 
-    'greek', 
-    'hebrew', 
-    'hungarian', 
-    'indonesian', 
-    'italian', 
-    'malay', 
-    'persian', 
-    'portuguese', 
-    'russian', 
-    'spanish', 
-    'tagalog', 
-    'turkish', 
-    'vietnamese', 
-]
 
 PL_LIST = [
     "csharp", 
@@ -107,40 +85,39 @@ def create_all_tasks():
         e.g. {multiple-py: Task, multiple-java: Task}
     """
     return {
-        f"humaneval-xl-{programming_language}-{natural_language}": create_task(natural_language, programming_language) 
-        for natural_language in NL_LIST for programming_language in PL_LIST
+        f"mxeval-{programming_language}": create_task(programming_language) 
+        for programming_language in PL_LIST
     }
 
 
 def create_task(nl, pl):
-    class HumanEvalXL(GeneralHumanEvalXL):
+    class MXEval(GeneralMXEval):
         def __init__(self):
             super().__init__(nl, pl)
 
-    return HumanEvalXL
+    return MXEval
 
 
-class GeneralHumanEvalXL(Task):
+class GeneralMXEval(Task):
     """A task represents an entire benchmark including its dataset, problems,
     answers, generation settings and evaluation methods.
     """
 
-    DATASET_PATH = "iNeil77/HumanEval-XL"
+    DATASET_PATH = "mxeval/multi-humaneval"
     DATASET_NAME = None
-    DATASET_REVISION = "2f2044483da160d6fb736741ae657ccf784227ba"
+    DATASET_REVISION = "b572eb39f2620835bcad352a122b15263519f612"
 
-    def __init__(self, natural_language, programming_language, num_workers=16):
-        self.natural_language = natural_language
+    def __init__(self, programming_language, num_workers=16):
         self.programming_language = programming_language
         self.workers = min(num_workers, os.cpu_count() - 1)
         self.DATASET_NAME = programming_language
         # we need the dataset to get stop words for each language
         self.dataset = load_dataset(
-            GeneralHumanEvalXL.DATASET_PATH,
+            GeneralMXEval.DATASET_PATH,
             self.DATASET_NAME,
             revision=self.DATASET_REVISION,
             trust_remote_code=True,
-            split=natural_language,
+            split="test",
         )
         self.stop_words = self.dataset[0]["stop_tokens"] + ["<file_sep>"]
         self.requires_execution=True,

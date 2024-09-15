@@ -147,7 +147,7 @@ def compute_code_eval(predictions, references, k=[1, 10, 25, 100], num_workers=4
         n_samples = 0
         results = defaultdict(list)
 
-        for task_id, (candidates, test_case) in tqdm(enumerate(zip(predictions, references)), total=len(predictions)):
+        for task_id, (candidates, test_case) in enumerate(zip(predictions, references)):
             for candidate in candidates:
                 test_program = candidate + "\n" + test_case
                 args = (test_program, timeout, task_id, completion_id[task_id])
@@ -156,9 +156,14 @@ def compute_code_eval(predictions, references, k=[1, 10, 25, 100], num_workers=4
                 completion_id[task_id] += 1
                 n_samples += 1
 
-        for future in as_completed(futures):
-            result = future.result()
-            results[result["task_id"]].append((result["completion_id"], result))
+        with tqdm(total=len(references), desc="Evaluating") as pbar:
+            count = 0
+            for future in as_completed(futures):
+                result = future.result()
+                count += 1
+                if count % len(predictions[0]) == 0:
+                    pbar.update(1)
+                results[result["task_id"]].append((result["completion_id"], result))
 
     total, correct = [], []
     for result in results.values():
