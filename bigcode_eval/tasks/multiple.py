@@ -93,11 +93,8 @@ class GeneralMultiPLE(Task):
             trust_remote_code=True,
             split="test",
         )
-        stop_words = self.dataset[0]["stop_tokens"] + ["<file_sep>"]
-        super().__init__(
-            stop_words=stop_words,
-            requires_execution=True,
-        )
+        self.stop_words = self.dataset[0]["stop_tokens"] + ["<file_sep>"]
+        self.requires_execution = True
 
     def get_dataset(self):
         """Returns dataset for the task or an iterable of any object, that get_prompt can handle"""
