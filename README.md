@@ -13,7 +13,7 @@ We provide instructions for running evaluations on a cluster with Apptainer (for
 1. Pull the image from the Docker Hub and create an apptainer SIF image. We provide a pre-built image based on the one in the Dockerfile directory available on the Docker Hub. You can pull it using the following command:
 
 ```bash
-apptainer pull docker://ineil77/code_inference:latest
+apptainer pull docker://ineil77/code_inference:15092024
 ```
 
 2. Create an overlay filesystem volume for the container to use. This is useful as the evaluations will generate a large number of files and the overlay filesystem will prevent the host filesystem from being cluttered. (TIP: Ask your sysadmin to raise the limit on the number of inodes for the host filesystem. This is a common issue when running evaluations as apptainer simply inherits the host filesystem's inode limit. A small limit can cause the evaluations to fail.)
