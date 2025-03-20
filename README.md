@@ -38,7 +38,7 @@ source /Miniforge/etc/profile.d/conda.sh
 source /Miniforge/etc/profile.d/mamba.sh
 mamba activate inference
 python -c 'from huggingface_hub import HfFolder; HfFolder.save_token("YOUR_TOKEN_HERE")'
-for split in "func_name"
+for split in "func_name" "format" "natgen" "nlaugmenter"
 do
     python main.py \
         --model $modelname \
